@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="evening" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#evening)" />
+  <circle cx="120" cy="110" r="42" fill="#f8fafc" opacity="0.95" />
+  <g fill="#60a5fa" opacity="0.7">
+    <ellipse cx="560" cy="390" rx="310" ry="70" />
+    <path d="M0 320 L120 250 L250 320 L340 260 L460 340 L580 260 L700 330 L800 290 L800 450 L0 450 Z" />
+  </g>
+  <path d="M0 330 C110 250 190 330 320 310 C430 295 520 360 680 330 L800 330 L800 450 L0 450 Z" fill="#0f172a" />
+</svg>

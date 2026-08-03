@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="morning" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#c7d2fe" />
+      <stop offset="100%" stop-color="#f8fafc" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#morning)" />
+  <circle cx="580" cy="130" r="55" fill="#fde68a" />
+  <path d="M0 270 L160 170 L330 240 L500 180 L700 250 L800 210 L800 450 L0 450 Z" fill="#22c55e" />
+  <rect x="0" y="270" width="800" height="180" fill="#1e40af" />
+  <path d="M0 300 C130 280 200 320 340 300 C450 280 520 330 700 300 L800 300 L800 450 L0 450 Z" fill="#2563eb" opacity="0.5" />
+</svg>

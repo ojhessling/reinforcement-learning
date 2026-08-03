@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="day" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#93c5fd" />
+      <stop offset="100%" stop-color="#dbeafe" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#day)" />
+  <circle cx="700" cy="90" r="54" fill="#facc15" />
+  <path d="M0 230 L140 160 L280 220 L420 150 L560 210 L700 160 L800 210 L800 450 L0 450 Z" fill="#16a34a" />
+  <rect x="0" y="250" width="800" height="200" fill="#1e3a8a" />
+  <path d="M0 280 C130 250 220 300 360 280 C470 265 560 330 720 290 L800 290 L800 450 L0 450 Z" fill="#2563eb" opacity="0.5" />
+</svg>
