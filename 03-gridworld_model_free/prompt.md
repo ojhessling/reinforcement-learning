@@ -46,8 +46,8 @@ Werten.
 - `gridworld_app.py`: minimaler Einstiegspunkt der Anwendung
 - `README.md`: Installation, Bedienung, Algorithmen und Projektstruktur
 - `requirements.txt`: externe Abhängigkeiten, insbesondere Matplotlib
-- zentrale `../../environment.yml` im Repository-Root: gemeinsames
-  Conda-Environment `rl-26-08` für alle Projekte
+- zentrale `../environment.yml` im Ordner `Oliver`: gemeinsames
+  Conda-Environment `rl-26-08` für alle Projekte von Oliver
 - `tests/test_gridworld_logic.py`: Unit-Tests für Environment und Algorithmen
 - `.gitignore`: ignoriert `.conda`, `.venv`, Python-Caches, erzeugte Diagramme,
   CSV-Exporte und macOS-Metadaten
@@ -692,14 +692,14 @@ Einmalige Einrichtung im Repository-Root:
 
 ```bash
 cd /Users/oliver/git/RL-26-08
-conda env create -f environment.yml
+conda env create -f Oliver/environment.yml
 conda activate rl-26-08
 python -c "import tkinter; print(tkinter.TkVersion)"
 ```
 
-Alle Projekte in diesem Repository verwenden dasselbe Environment
-`rl-26-08`. Die dokumentierte Tk-Version muss mindestens `8.6` sein. Conda und
-`.venv` dürfen nicht gleichzeitig aktiviert werden.
+Alle Projekte im Ordner `Oliver` verwenden dasselbe Environment `rl-26-08`.
+Die dokumentierte Tk-Version muss mindestens `8.6` sein. Conda und `.venv`
+dürfen nicht gleichzeitig aktiviert werden.
 
 ## Tests
 

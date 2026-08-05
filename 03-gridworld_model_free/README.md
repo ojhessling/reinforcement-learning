@@ -5,12 +5,12 @@ tabellarischen Reinforcement-Learning-Verfahren.
 
 ## Zentrales Conda-Environment
 
-Das Repository verwendet das gemeinsame Environment `rl-26-08`. Einmalig im
-Repository-Root erstellen:
+Alle Projekte von Oliver verwenden das gemeinsame Environment `rl-26-08`.
+Einmalig im Repository-Root erstellen:
 
 ```bash
 cd /Users/oliver/git/RL-26-08
-conda env create -f environment.yml
+conda env create -f Oliver/environment.yml
 ```
 
 Aktivieren und Anwendung starten:

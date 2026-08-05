@@ -18,7 +18,7 @@ python gridworld_app.py
 Falls das Environment noch nicht aktualisiert wurde:
 
 ```bash
-conda env update --name rl-26-08 --file ../../environment.yml --prune
+conda env update --name rl-26-08 --file ../environment.yml --prune
 ```
 
 ## Sinnvolle Reihenfolge in der App

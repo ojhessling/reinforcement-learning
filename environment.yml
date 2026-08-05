@@ -1,0 +1,11 @@
+name: rl-26-08
+channels:
+  - defaults
+dependencies:
+  - python=3.13
+  - tk>=8.6
+  - matplotlib
+  - numpy
+  - pillow
+  - requests
+  - pip
