@@ -4,6 +4,7 @@ from gridworld_logic import (
     ACTIONS,
     DOWN,
     RIGHT,
+    UP,
     Agent,
     ExpectedSarsaPolicy,
     GridWorld,
@@ -12,6 +13,7 @@ from gridworld_logic import (
     SarsaPolicy,
     Transition,
     compare_policies,
+    state_table_rows,
 )
 
 
@@ -103,6 +105,30 @@ class PolicyTests(unittest.TestCase):
 
 
 class AgentAndComparisonTests(unittest.TestCase):
+    def test_state_tables_distinguish_unvisited_and_learned_values(self):
+        environment = GridWorld(
+            width=3, height=2, start=(0, 0), goal=(2, 0), blocked=((1, 1),), max_steps=4
+        )
+        policy = QLearningPolicy(seed=2)
+        initial = state_table_rows(environment, policy)
+        start = next(row for row in initial if (row["x"], row["y"]) == environment.start)
+        goal = next(row for row in initial if (row["x"], row["y"]) == environment.goal)
+        obstacle = next(row for row in initial if (row["x"], row["y"]) == (1, 1))
+        self.assertIsNone(start["value"])
+        self.assertEqual(start["status"], "Start – unbesucht")
+        self.assertEqual(goal["value"], 0.0)
+        self.assertEqual(goal["status"], "Ziel")
+        self.assertIsNone(obstacle["value"])
+
+        policy.q[environment.start][RIGHT] = -2.5
+        policy.state_visits[environment.start] = 3
+        learned = state_table_rows(environment, policy)
+        start = next(row for row in learned if (row["x"], row["y"]) == environment.start)
+        self.assertEqual(start["q_right"], -2.5)
+        self.assertEqual(start["value"], 0.0)
+        self.assertEqual(start["visits"], 3)
+        self.assertEqual(start["status"], "Start – gelernt")
+
     def test_sarsa_cached_action_is_executed_next(self):
         environment = GridWorld(width=3, height=2, start=(0, 0), goal=(2, 0), blocked=(), max_steps=5)
         policy = SarsaPolicy(
@@ -129,6 +155,30 @@ class AgentAndComparisonTests(unittest.TestCase):
         self.assertEqual(trajectory[-1].termination_reason, "goal_reached")
         self.assertEqual(agent.episode_count, 0)
         self.assertEqual([row[:] for row in policy.q.values()], before)
+
+    def test_greedy_evaluation_without_path_stops_at_policy_cycle(self):
+        """Regression: a cyclic learned policy must not crash the evaluation."""
+        environment = GridWorld(
+            width=3,
+            height=2,
+            start=(0, 0),
+            goal=(2, 0),
+            blocked=(),
+            max_steps=4,
+        )
+        policy = QLearningPolicy(seed=7)
+        agent = Agent(environment, policy)
+        policy.q[(0, 0)][UP] = 10.0
+        before_q = [row[:] for row in policy.q.values()]
+
+        trajectory = agent.run_episode(training=False)
+
+        self.assertLess(len(trajectory), environment.max_steps)
+        self.assertEqual(trajectory[-1].termination_reason, "policy_cycle")
+        self.assertFalse(agent.episode_active)
+        self.assertEqual(agent.episode_count, 0)
+        self.assertEqual(agent.returns, [])
+        self.assertEqual([row[:] for row in policy.q.values()], before_q)
 
     def test_comparison_is_reproducible_and_isolated(self):
         config = {"width": 3, "height": 2, "start": (0, 0), "goal": (2, 0), "blocked": (), "max_steps": 6}

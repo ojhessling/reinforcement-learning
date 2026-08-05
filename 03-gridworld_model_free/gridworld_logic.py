@@ -350,6 +350,8 @@ class Agent:
         self.training = True
         self.current_return = 0.0
         self._cached_action: Optional[int] = None
+        self._evaluation_actions: Dict[State, int] = {}
+        self._evaluation_pairs: set[Tuple[State, int]] = set()
 
     def start_episode(self, training: bool = True) -> State:
         state = self.environment.reset()
@@ -358,6 +360,8 @@ class Agent:
         self.episode_active = True
         self.training = training
         self._cached_action = None
+        self._evaluation_actions = {}
+        self._evaluation_pairs = set()
         if training:
             self.policy.set_episode(self.episode_count)
         return state
@@ -369,11 +373,31 @@ class Agent:
         if action is None:
             action = self._cached_action
             if action is None:
-                action = self.policy.select_action(state, greedy=not training)
+                if training:
+                    action = self.policy.select_action(state, greedy=False)
+                else:
+                    # A visible greedy policy should make the same decision each
+                    # time it revisits a state. This makes actual cycles visible
+                    # and allows them to terminate immediately.
+                    action = self._evaluation_actions.setdefault(
+                        state, self.policy.select_action(state, greedy=True)
+                    )
+        repeated_pair = not training and (state, action) in self._evaluation_pairs
+        if not training:
+            self._evaluation_pairs.add((state, action))
         next_state, reward, done, info = self.environment.step(action)
+        termination_reason = info["termination_reason"]
+        if repeated_pair and not done:
+            done = True
+            termination_reason = "policy_cycle"
         next_action: Optional[int] = None
         if not done and isinstance(self.policy, SarsaPolicy):
-            next_action = self.policy.select_action(next_state, greedy=not training)
+            if training:
+                next_action = self.policy.select_action(next_state, greedy=False)
+            else:
+                next_action = self._evaluation_actions.setdefault(
+                    next_state, self.policy.select_action(next_state, greedy=True)
+                )
         transition = Transition(
             episode=self.episode_count + 1,
             step=len(self.current_trajectory) + 1,
@@ -382,7 +406,7 @@ class Agent:
             next_state=next_state,
             reward=reward,
             done=done,
-            termination_reason=info["termination_reason"],
+            termination_reason=termination_reason,
             policy=self.policy.name,
         )
         self.current_trajectory.append(transition)
@@ -409,6 +433,8 @@ class Agent:
         self.latest_trajectory = self.current_trajectory[:]
         self.episode_active = False
         self._cached_action = None
+        self._evaluation_actions = {}
+        self._evaluation_pairs = set()
 
     def run_episode(self, training: bool = True) -> List[Transition]:
         self.start_episode(training=training)
@@ -422,6 +448,8 @@ class Agent:
         self.current_return = 0.0
         self.episode_active = False
         self._cached_action = None
+        self._evaluation_actions = {}
+        self._evaluation_pairs = set()
 
 
 @dataclass
@@ -442,6 +470,43 @@ def moving_average(values: Sequence[float], window: int = 20) -> List[float]:
         start = max(0, index - window + 1)
         result.append(mean(values[start : index + 1]))
     return result
+
+
+def state_table_rows(environment: GridWorld, policy: BasePolicy) -> List[Dict[str, object]]:
+    """Return presentation-neutral current V/Q data for every grid cell."""
+    rows: List[Dict[str, object]] = []
+    blocked = set(environment.blocked)
+    for y in range(environment.height):
+        for x in range(environment.width):
+            state = (x, y)
+            is_blocked = state in blocked
+            is_goal = state == environment.goal
+            visits = 0 if is_blocked else policy.state_visits[state]
+            learned = visits > 0
+            q_values = [policy.get_q_value(state, action) for action in ACTIONS] if not is_blocked else [0.0] * 4
+            if is_blocked:
+                status = "Hindernis"
+            elif is_goal:
+                status = "Ziel"
+            elif state == environment.start:
+                status = "Start – gelernt" if learned else "Start – unbesucht"
+            else:
+                status = "Gelernt" if learned else "Unbesucht"
+            best_actions = policy.best_actions(state) if learned and not is_goal else []
+            has_value = learned or is_goal
+            rows.append({
+                "x": x,
+                "y": y,
+                "value": max(q_values) if has_value else None,
+                "q_up": q_values[UP] if has_value else None,
+                "q_down": q_values[DOWN] if has_value else None,
+                "q_left": q_values[LEFT] if has_value else None,
+                "q_right": q_values[RIGHT] if has_value else None,
+                "best_actions": " ".join(ACTION_NAMES[action] for action in best_actions),
+                "visits": visits,
+                "status": status,
+            })
+    return rows
 
 
 def compare_policies(

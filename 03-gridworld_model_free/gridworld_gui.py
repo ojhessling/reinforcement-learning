@@ -31,6 +31,7 @@ from gridworld_logic import (
     compare_policies,
     create_policy,
     moving_average,
+    state_table_rows,
 )
 
 POLICY_NAMES = ("Monte Carlo", "SARSA", "Expected SARSA", "Q-Learning")
@@ -46,6 +47,28 @@ CSV_FIELDS = (
     "next_state_x", "next_state_y", "reward", "done",
     "termination_reason", "policy",
 )
+
+GRID_PRESETS = {
+    "3 × 5 – Standard": {
+        "width": 5, "height": 3, "start": (0, 2), "goal": (4, 2),
+        "blocked": ((2, 1), (2, 2)), "max_steps": 20,
+    },
+    "5 × 7 – Zickzack": {
+        "width": 7, "height": 5, "start": (0, 4), "goal": (6, 0),
+        "blocked": ((2, 0), (2, 2), (2, 3), (2, 4),
+                    (4, 0), (4, 1), (4, 2), (4, 4)),
+        "max_steps": 100,
+    },
+    "10 × 10 – Zickzack": {
+        "width": 10, "height": 10, "start": (0, 9), "goal": (9, 0),
+        "blocked": (
+            (2, 0), (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 7), (2, 8), (2, 9),
+            (5, 0), (5, 1), (5, 2), (5, 4), (5, 5), (5, 6), (5, 7), (5, 8), (5, 9),
+            (7, 0), (7, 1), (7, 2), (7, 3), (7, 4), (7, 5), (7, 6), (7, 8), (7, 9),
+        ),
+        "max_steps": 300,
+    },
+}
 
 
 class GridGUI:
@@ -104,6 +127,7 @@ class GridGUI:
         self.goal_x_var = tk.StringVar(value=str(env.goal[0]))
         self.goal_y_var = tk.StringVar(value=str(env.goal[1]))
         self.blocked_var = tk.StringVar(value=", ".join("({},{})".format(*cell) for cell in env.blocked))
+        self.grid_preset_var = tk.StringVar(value="3 × 5 – Standard")
         self.seed_var = tk.StringVar(value="42")
         self.policy_var = tk.StringVar(value=self.agent.policy.name)
         self.episodes_var = tk.StringVar(value="100")
@@ -147,6 +171,18 @@ class GridGUI:
     def _build_controls(self, parent: ttk.Frame) -> None:
         grid_box = ttk.LabelFrame(parent, text="Grid-Konfiguration", padding=8)
         grid_box.pack(fill="x", pady=(0, 7))
+        preset_row = ttk.Frame(grid_box)
+        preset_row.pack(fill="x", pady=(0, 5))
+        ttk.Label(preset_row, text="Vorlage").pack(side="left")
+        self.grid_preset_box = ttk.Combobox(
+            preset_row,
+            textvariable=self.grid_preset_var,
+            values=tuple(GRID_PRESETS),
+            state="readonly",
+            width=22,
+        )
+        self.grid_preset_box.pack(side="right", fill="x", expand=True, padx=(6, 0))
+        self.grid_preset_box.bind("<<ComboboxSelected>>", self._preset_changed)
         dimensions = ttk.Frame(grid_box)
         dimensions.pack(fill="x")
         for col, (label, var) in enumerate((("Breite", self.width_var), ("Höhe", self.height_var))):
@@ -312,44 +348,90 @@ class GridGUI:
             raise ValueError("Ungültige Epsilon-Werte.")
         return {"alpha": alpha, "gamma": gamma, "epsilon_start": epsilon_start, "epsilon_min": epsilon_min, "epsilon_decay": epsilon_decay, "seed": self._seed(self.seed_var), "use_algorithm_defaults": self.use_defaults_var.get()}
 
-    def apply_grid(self) -> None:
+    def _candidate_from_inputs(self) -> GridWorld:
+        episodes = int(self.episodes_var.get())
+        if episodes <= 0:
+            raise ValueError("Episoden muss eine positive Ganzzahl sein.")
+        return GridWorld(
+            width=int(self.width_var.get()),
+            height=int(self.height_var.get()),
+            start=(int(self.start_x_var.get()), int(self.start_y_var.get())),
+            goal=(int(self.goal_x_var.get()), int(self.goal_y_var.get())),
+            blocked=self._parse_blocked(self.blocked_var.get()),
+            max_steps=int(self.max_steps_var.get()),
+            seed=self._seed(self.seed_var),
+        )
+
+    def _sync_inputs(self, force_reset: bool = False) -> bool:
+        """Apply edited fields immediately before an action is started."""
         try:
-            candidate = GridWorld(
-                width=int(self.width_var.get()), height=int(self.height_var.get()),
-                start=(int(self.start_x_var.get()), int(self.start_y_var.get())),
-                goal=(int(self.goal_x_var.get()), int(self.goal_y_var.get())),
-                blocked=self._parse_blocked(self.blocked_var.get()),
-                max_steps=int(self.max_steps_var.get()), seed=self._seed(self.seed_var),
-            )
-            policy = create_policy(self.policy_var.get(), **self._policy_parameters())
+            candidate = self._candidate_from_inputs()
+            parameters = self._policy_parameters()
         except ValueError as error:
-            messagebox.showerror("Ungültige Konfiguration", str(error))
-            return
-        self.environment = candidate
-        self.policies = {name: create_policy(name, **self._policy_parameters()) for name in POLICY_NAMES}
-        self.agent = Agent(self.environment, policy)
-        self.manual_mode = False
-        self.status_var.set("Grid angewendet und Training zurückgesetzt.")
-        self._refresh_all()
+            messagebox.showerror("Ungültige Eingabe", str(error), parent=self.root)
+            return False
+
+        old_structure = (
+            self.environment.width, self.environment.height, self.environment.start,
+            self.environment.goal, self.environment.blocked, self.environment.seed,
+        )
+        new_structure = (
+            candidate.width, candidate.height, candidate.start,
+            candidate.goal, candidate.blocked, candidate.seed,
+        )
+        policy = self.agent.policy
+        policy_changed = (
+            policy.name != self.policy_var.get()
+            or policy.alpha != parameters["alpha"]
+            or policy.gamma != parameters["gamma"]
+            or policy.epsilon_start != parameters["epsilon_start"]
+            or policy.epsilon_min != parameters["epsilon_min"]
+            or policy.epsilon_decay != parameters["epsilon_decay"]
+            or policy.use_algorithm_defaults != parameters["use_algorithm_defaults"]
+        )
+        if force_reset or old_structure != new_structure or policy_changed:
+            self.environment = candidate
+            self.policies = {
+                name: create_policy(name, **parameters) for name in POLICY_NAMES
+            }
+            self.agent = Agent(
+                candidate, create_policy(self.policy_var.get(), **parameters)
+            )
+            self.manual_mode = False
+            self.progress_var.set(0)
+            self.status_var.set("Geänderte Einstellungen übernommen; Training zurückgesetzt.")
+        elif candidate.max_steps != self.environment.max_steps:
+            # A different episode limit does not invalidate learned Q-values.
+            self.agent.cancel_episode()
+            self.environment = candidate
+            self.agent.environment = candidate
+            self.manual_mode = False
+            self.status_var.set("Max. Schritte automatisch übernommen; Training bleibt erhalten.")
+        return True
+
+    def _preset_changed(self, _event: object = None) -> None:
+        preset = GRID_PRESETS[self.grid_preset_var.get()]
+        self.width_var.set(str(preset["width"]))
+        self.height_var.set(str(preset["height"]))
+        self.start_x_var.set(str(preset["start"][0]))
+        self.start_y_var.set(str(preset["start"][1]))
+        self.goal_x_var.set(str(preset["goal"][0]))
+        self.goal_y_var.set(str(preset["goal"][1]))
+        self.blocked_var.set(", ".join("({},{})".format(*cell) for cell in preset["blocked"]))
+        self.max_steps_var.set(str(preset["max_steps"]))
+        if self._sync_inputs(force_reset=True):
+            self.status_var.set("Grid-Vorlage angewendet und Training zurückgesetzt.")
+            self._refresh_all()
+
+    def apply_grid(self) -> None:
+        if self._sync_inputs(force_reset=True):
+            self.status_var.set("Grid angewendet und Training zurückgesetzt.")
+            self._refresh_all()
 
     def apply_training(self) -> None:
-        try:
-            max_steps = int(self.max_steps_var.get())
-            episodes = int(self.episodes_var.get())
-            if episodes <= 0:
-                raise ValueError("Episoden muss positiv sein.")
-            config = self.environment_config()
-            config["max_steps"] = max_steps
-            candidate = GridWorld(**config)
-            policy = create_policy(self.policy_var.get(), **self._policy_parameters())
-        except ValueError as error:
-            messagebox.showerror("Ungültige Parameter", str(error))
-            return
-        self.environment = candidate
-        self.agent = Agent(candidate, policy)
-        self.manual_mode = False
-        self.status_var.set("Parameter angewendet und Training zurückgesetzt.")
-        self._refresh_all()
+        if self._sync_inputs(force_reset=True):
+            self.status_var.set("Parameter angewendet und Training zurückgesetzt.")
+            self._refresh_all()
 
     def environment_config(self) -> Dict[str, object]:
         return {"width": self.environment.width, "height": self.environment.height, "start": self.environment.start, "goal": self.environment.goal, "blocked": self.environment.blocked, "max_steps": self.environment.max_steps, "seed": self.environment.seed}
@@ -379,6 +461,8 @@ class GridGUI:
     def manual_step(self, action: int) -> None:
         if self.training_running or self.animation_running:
             return
+        if not self._sync_inputs():
+            return
         if not self.manual_mode or self.environment.done:
             self.environment.reset()
             self.agent.cancel_episode()
@@ -394,6 +478,8 @@ class GridGUI:
     def single_step(self) -> None:
         if self.training_running or self.animation_running:
             return
+        if not self._sync_inputs():
+            return
         self._switch_from_manual()
         transition = self.agent.step(training=True)
         self.status_var.set("{}: {} → Reward {}".format(self.agent.policy.name, ACTION_NAMES[transition.action], int(transition.reward)))
@@ -401,6 +487,8 @@ class GridGUI:
 
     def single_episode(self) -> None:
         if self.training_running or self.animation_running:
+            return
+        if not self._sync_inputs():
             return
         self._switch_from_manual()
         self.animation_running = True
@@ -412,16 +500,43 @@ class GridGUI:
             self.animation_running = False
             self._set_controls_enabled(True)
             reason = self.agent.latest_trajectory[-1].termination_reason if self.agent.latest_trajectory else ""
-            self.status_var.set("{} abgeschlossen: {}".format("Trainingsepisode" if training else "Greedy-Auswertung", reason))
+            if reason == "goal_reached":
+                result_text = "Ziel erreicht"
+            elif reason == "policy_cycle":
+                result_text = "Policy steckt in einer Schleife – weiter trainieren"
+            elif reason == "max_steps":
+                result_text = "Max Steps erreicht – noch kein vollständiger Weg gelernt"
+            else:
+                result_text = "ohne Ergebnis beendet"
+            self.status_var.set("{} abgeschlossen: {}".format("Trainingsepisode" if training else "Greedy-Auswertung", result_text))
             self._refresh_all()
+            if not training and reason in ("max_steps", "policy_cycle"):
+                messagebox.showinfo(
+                    "Noch kein vollständiger Weg",
+                    "Die gelernte Policy erreicht das Ziel noch nicht. Sie läuft in eine "
+                    "Schleife oder überschreitet Max. Schritte.\n\n"
+                    "Trainiere weitere Episoden oder erhöhe Max. Schritte und versuche es erneut.",
+                    parent=self.root,
+                )
             return
         self._set_controls_enabled(False)
-        self.agent.step(training=training)
+        try:
+            self.agent.step(training=training)
+        except (RuntimeError, ValueError) as error:
+            self.agent.cancel_episode()
+            self.animation_running = False
+            self._set_controls_enabled(True)
+            self.status_var.set("Auswertung sicher beendet.")
+            messagebox.showerror("Auswertung nicht möglich", str(error), parent=self.root)
+            self._refresh_all()
+            return
         self._refresh_all()
         self.root.after(120, lambda: self._animate_episode(training))
 
     def start_training(self) -> None:
         if self.training_running or self.animation_running:
+            return
+        if not self._sync_inputs():
             return
         try:
             count = int(self.episodes_var.get())
@@ -463,6 +578,17 @@ class GridGUI:
 
     def run_greedy_evaluation(self) -> None:
         if self.training_running or self.animation_running:
+            return
+        if not self._sync_inputs():
+            return
+        if self.agent.episode_count == 0:
+            messagebox.showinfo(
+                "Noch keine gelernte Policy",
+                "Für die ausgewählte Methode wurde noch keine Episode trainiert.\n\n"
+                "Führe zuerst eine Episode oder das Training mit N Episoden aus.",
+                parent=self.root,
+            )
+            self.status_var.set("Greedy-Auswertung nicht gestartet: zuerst trainieren.")
             return
         self._switch_from_manual()
         self.animation_running = True
@@ -580,59 +706,117 @@ class GridGUI:
             except OSError as error:
                 messagebox.showerror("Speichern fehlgeschlagen", str(error))
 
-    def _value_dialog_canvas(self, title: str) -> Tuple[tk.Toplevel, tk.Canvas]:
-        dialog = tk.Toplevel(self.root)
-        dialog.title(title)
-        dialog.geometry("760x620")
-        canvas = tk.Canvas(dialog, bg="white")
-        canvas.pack(fill="both", expand=True, padx=8, pady=8)
-        buttons = ttk.Frame(dialog)
-        buttons.pack(fill="x", padx=8, pady=(0, 8))
-        ttk.Button(buttons, text="CSV-Trajektorie exportieren", command=self.export_trajectory).pack(side="left")
-        ttk.Button(buttons, text="Schließen", command=dialog.destroy).pack(side="right")
-        return dialog, canvas
-
     def open_value_dialog(self) -> None:
-        dialog, canvas = self._value_dialog_canvas("Value-Tabelle – V(s)")
-        self._draw_value_grid(canvas, q_mode=False)
-        ttk.Button(dialog, text="Aktualisieren", command=lambda: self._draw_value_grid(canvas, q_mode=False)).pack(pady=(0, 7))
+        self._open_state_table(q_mode=False)
 
     def open_q_dialog(self) -> None:
-        dialog, canvas = self._value_dialog_canvas("Q-Tabelle und greedy Policy")
-        self._draw_value_grid(canvas, q_mode=True)
-        ttk.Button(dialog, text="Aktualisieren", command=lambda: self._draw_value_grid(canvas, q_mode=True)).pack(pady=(0, 7))
+        self._open_state_table(q_mode=True)
 
-    def _draw_value_grid(self, canvas: tk.Canvas, q_mode: bool) -> None:
-        canvas.delete("all")
-        canvas.update_idletasks()
-        env, policy = self.environment, self.agent.policy
-        width, height = max(canvas.winfo_width(), 700), max(canvas.winfo_height(), 500)
-        cell = min((width - 30) / env.width, (height - 30) / env.height)
-        ox, oy = (width - cell * env.width) / 2, (height - cell * env.height) / 2
-        for y in range(env.height):
-            for x in range(env.width):
-                state = (x, y)
-                x1, y1 = ox + x * cell, oy + y * cell
-                fill = "#374151" if state in env.blocked else "#ffffff"
-                if state == env.start:
-                    fill = "#bbf7d0"
-                elif state == env.goal:
-                    fill = "#fde68a"
-                canvas.create_rectangle(x1, y1, x1 + cell, y1 + cell, fill=fill, outline="#64748b")
-                if state in env.blocked:
-                    continue
-                if state == env.goal:
-                    canvas.create_text(x1 + cell / 2, y1 + cell / 2, text="ZIEL", font=("TkDefaultFont", 10, "bold"))
-                elif q_mode:
-                    if not policy.is_state_visited(state) and all(value == 0 for value in policy.q[state]):
-                        canvas.create_text(x1 + cell / 2, y1 + cell / 2, text="?", font=("TkDefaultFont", 18, "bold"), fill="#64748b")
-                    else:
-                        values = policy.q[state]
-                        best = set(policy.best_actions(state))
-                        text = "\n".join("{} {:.2f}{}".format(ARROWS[action], values[action], " *" if action in best else "") for action in ACTIONS)
-                        canvas.create_text(x1 + cell / 2, y1 + cell / 2, text=text, font=("TkDefaultFont", 9), justify="left")
-                else:
-                    canvas.create_text(x1 + cell / 2, y1 + cell / 2, text="V(s)\n{:.3f}".format(policy.get_state_value(state)), font=("TkDefaultFont", 10, "bold"))
+    def _open_state_table(self, q_mode: bool) -> None:
+        """Show all current state values in a readable, scrollable table."""
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Q-Tabelle und greedy Policy" if q_mode else "Value-Tabelle – V(s)")
+        dialog.geometry("1050x650" if q_mode else "780x650")
+        dialog.minsize(680, 440)
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        outer = ttk.Frame(dialog, padding=10)
+        outer.pack(fill="both", expand=True)
+        ttk.Label(
+            outer,
+            text="Aktueller Lernstand: {} nach {} Trainingsepisoden".format(
+                self.agent.policy.name, self.agent.episode_count
+            ),
+            font=("TkDefaultFont", 12, "bold"),
+        ).pack(anchor="w")
+        ttk.Label(
+            outer,
+            text="— bedeutet: Für diesen Zustand liegt noch kein Trainingsupdate vor.",
+            foreground="#475569",
+        ).pack(anchor="w", pady=(2, 8))
+
+        if q_mode:
+            columns = ("x", "y", "q_up", "q_down", "q_left", "q_right", "best_actions", "visits", "status")
+            headings = {
+                "x": "X", "y": "Y", "q_up": "Q Up", "q_down": "Q Down",
+                "q_left": "Q Left", "q_right": "Q Right", "best_actions": "Beste Actions",
+                "visits": "Besuche", "status": "Status",
+            }
+        else:
+            columns = ("x", "y", "value", "best_actions", "visits", "status")
+            headings = {
+                "x": "X", "y": "Y", "value": "V(s)", "best_actions": "Beste Actions",
+                "visits": "Besuche", "status": "Status",
+            }
+
+        table_frame = ttk.Frame(outer)
+        table_frame.pack(fill="both", expand=True)
+        tree = ttk.Treeview(table_frame, columns=columns, show="headings")
+        y_scroll = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
+        x_scroll = ttk.Scrollbar(table_frame, orient="horizontal", command=tree.xview)
+        tree.configure(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
+        tree.grid(row=0, column=0, sticky="nsew")
+        y_scroll.grid(row=0, column=1, sticky="ns")
+        x_scroll.grid(row=1, column=0, sticky="ew")
+        table_frame.columnconfigure(0, weight=1)
+        table_frame.rowconfigure(0, weight=1)
+        for column in columns:
+            tree.heading(column, text=headings[column])
+            tree.column(column, width=150 if column in ("best_actions", "status") else 90, minwidth=65, anchor="center")
+
+        table_rows = state_table_rows(self.environment, self.agent.policy)
+
+        def display(value: object) -> object:
+            if value is None:
+                return "—"
+            return "{:.4f}".format(value) if isinstance(value, float) else value
+
+        for row in table_rows:
+            if row["status"] == "Hindernis":
+                tags = ("obstacle",)
+            elif str(row["status"]).startswith("Start"):
+                tags = ("start",)
+            elif row["status"] == "Ziel":
+                tags = ("goal",)
+            else:
+                tags = ()
+            tree.insert("", "end", values=[display(row[column]) for column in columns], tags=tags)
+        tree.tag_configure("obstacle", background="#e2e8f0")
+        tree.tag_configure("start", background="#dcfce7")
+        tree.tag_configure("goal", background="#fef9c3")
+
+        def export_table() -> None:
+            default = "{}-{}-episode-{}.csv".format(
+                "q-table" if q_mode else "value-table",
+                self.agent.policy.name.lower().replace(" ", "-"),
+                self.agent.episode_count,
+            )
+            path = filedialog.asksaveasfilename(
+                parent=dialog,
+                initialfile=default,
+                defaultextension=".csv",
+                filetypes=(("CSV-Datei", "*.csv"),),
+            )
+            if not path:
+                return
+            try:
+                with Path(path).open("w", newline="", encoding="utf-8") as handle:
+                    writer = csv.DictWriter(handle, fieldnames=columns)
+                    writer.writeheader()
+                    for row in table_rows:
+                        writer.writerow({column: display(row[column]) for column in columns})
+            except OSError as error:
+                messagebox.showerror("Export fehlgeschlagen", str(error), parent=dialog)
+                return
+            messagebox.showinfo("Export abgeschlossen", path, parent=dialog)
+
+        buttons = ttk.Frame(outer)
+        buttons.pack(fill="x", pady=(8, 0))
+        ttk.Button(buttons, text="Tabelle als CSV exportieren", command=export_table).pack(side="left")
+        ttk.Button(buttons, text="Schließen", command=dialog.destroy).pack(side="right")
+        dialog.bind("<Escape>", lambda _event: dialog.destroy())
+        dialog.wait_window()
 
     def start_comparison(self) -> None:
         if self.comparison_running:
