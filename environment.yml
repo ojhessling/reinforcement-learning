@@ -10,3 +10,5 @@ dependencies:
   - requests
   - gymnasium
   - pip
+  - pip:
+      - pygame>=2.5

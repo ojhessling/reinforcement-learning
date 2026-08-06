@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import Mock, patch
 
 import numpy as np
 
@@ -18,6 +19,17 @@ class EnvironmentTests(unittest.TestCase):
         self.assertEqual(CliffWalkingEnvironment.observation_to_position(47), (3, 11))
         with self.assertRaises(ValueError):
             CliffWalkingEnvironment.position_to_observation((4, 0))
+
+    @patch("cliff_walking_logic.gym.make")
+    def test_environment_uses_required_gymnasium_factory_call(self, make_mock):
+        gym_environment = Mock()
+        gym_environment.reset.return_value = (36, {})
+        gym_environment.action_space = Mock()
+        make_mock.return_value = gym_environment
+
+        self.environment = CliffWalkingEnvironment(max_steps=10, seed=1)
+
+        make_mock.assert_called_once_with("CliffWalking-v1", render_mode="rgb_array")
 
     def test_normal_step_has_minus_one_reward(self):
         self.environment = CliffWalkingEnvironment(max_steps=10, seed=1)

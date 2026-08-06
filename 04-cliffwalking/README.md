@@ -33,12 +33,18 @@ python cliff_walking_app.py
 1. Methode und Parameter auswählen.
 2. `N Episoden trainieren` starten. Geänderte Einstellungen werden automatisch
    übernommen; strukturelle Änderungen setzen das Training zurück.
-3. Return-Kurve und Policy-Pfeile beobachten.
+3. Textuelle Zustandsanzeige und Return-Kurve beobachten.
 4. Mit `Gelernte Policy ausführen` eine greedy Episode ohne Lernupdates
    animieren.
 5. Über `Q-Tabelle öffnen` gelernte und unbesuchte Zustände untersuchen.
 
-Die Checkbox `Slippery` aktiviert die stochastische Gymnasium-Variante.
+`Animation anzeigen` aktiviert die schrittweise Darstellung. Das
+`Animationsintervall (ms)` bestimmt die Pause zwischen zwei Schritten und ist
+standardmäßig `10 ms`. Ohne Animation wird nur das Endergebnis angezeigt.
+
+Das Spielfeld ist der offizielle RGB-Frame des mit
+`gymnasium.make("CliffWalking-v1", render_mode="rgb_array")` erstellten
+Environments. Die Anwendung zeichnet bewusst kein eigenes Spielfeld.
 
 ## Methoden
 

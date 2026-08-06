@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
+import os
 import random
 from dataclasses import dataclass
 from statistics import mean
 from typing import Dict, List, Optional, Sequence, Tuple, Type
+
+# Gymnasium uses Pygame to generate rgb_array frames. The dummy video driver
+# keeps that renderer offscreen and avoids a second macOS GUI event loop next
+# to Tkinter.
+os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
 import gymnasium as gym
 import numpy as np
@@ -55,22 +61,14 @@ class CliffWalkingEnvironment:
 
     def __init__(
         self,
-        is_slippery: bool = False,
         max_steps: int = 500,
         seed: Optional[int] = 42,
-        render_mode: Optional[str] = None,
     ) -> None:
         if max_steps <= 0:
             raise ValueError("Max. Schritte muss eine positive Ganzzahl sein.")
-        self.is_slippery = bool(is_slippery)
         self.max_steps = max_steps
         self.seed = seed
-        self.render_mode = render_mode
-        self._environment = gym.make(
-            "CliffWalking-v1",
-            is_slippery=self.is_slippery,
-            render_mode=render_mode,
-        )
+        self._environment = gym.make("CliffWalking-v1", render_mode="rgb_array")
         if seed is not None:
             self._environment.action_space.seed(seed)
         self.reset(seed=seed)
@@ -125,20 +123,17 @@ class CliffWalkingEnvironment:
             truncated, self.done, fell_into_cliff, reason, self.step_count,
         )
 
-    def render_rgb(self) -> np.ndarray:
-        if self.render_mode != "rgb_array":
-            raise RuntimeError("render_rgb() benötigt render_mode='rgb_array'.")
-        return np.asarray(self._environment.render())
-
     def close(self) -> None:
         self._environment.close()
 
+    def render_rgb(self) -> np.ndarray:
+        """Return Gymnasium's official CliffWalking visualization."""
+        return np.asarray(self._environment.render())
+
     def configuration(self) -> Dict[str, object]:
         return {
-            "is_slippery": self.is_slippery,
             "max_steps": self.max_steps,
             "seed": self.seed,
-            "render_mode": self.render_mode,
         }
 
 

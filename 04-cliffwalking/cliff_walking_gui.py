@@ -8,10 +8,11 @@ from typing import Dict, Optional
 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
+from PIL import Image, ImageTk
 
 from cliff_walking_logic import (
-    ACTION_ARROWS, ACTIONS, POLICY_CLASSES, BaseTabularPolicy,
-    CliffWalkingEnvironment, TabularAgent, create_policy,
+    ACTION_ARROWS, ACTION_NAMES, POLICY_CLASSES, CliffWalkingEnvironment,
+    TabularAgent, create_policy,
 )
 
 METHOD_COLORS = {
@@ -22,9 +23,13 @@ METHOD_COLORS = {
 
 
 class CliffWalkingGUI:
-    def __init__(self, root: tk.Tk) -> None:
+    def __init__(
+        self,
+        root: tk.Tk,
+        environment: Optional[CliffWalkingEnvironment] = None,
+    ) -> None:
         self.root = root
-        self.environment = CliffWalkingEnvironment()
+        self.environment = environment or CliffWalkingEnvironment()
         self.agent = TabularAgent(self.environment, create_policy("SARSA"))
         self.training_running = False
         self.animation_running = False
@@ -46,9 +51,10 @@ class CliffWalkingGUI:
         self.epsilon_min_var = tk.StringVar(value="0.05")
         self.epsilon_decay_var = tk.StringVar(value="0.995")
         self.seed_var = tk.StringVar(value="42")
-        self.slippery_var = tk.BooleanVar(value=False)
-        self.show_policy_var = tk.BooleanVar(value=True)
+        self.animation_enabled_var = tk.BooleanVar(value=True)
+        self.animation_delay_var = tk.StringVar(value="10")
         self.status_var = tk.StringVar(value="Bereit – wähle eine Methode und starte das Training.")
+        self.state_var = tk.StringVar()
         self.summary_var = tk.StringVar()
         self.progress_var = tk.DoubleVar(value=0.0)
 
@@ -109,8 +115,15 @@ class CliffWalkingGUI:
         self._entry(settings, 6, "Epsilon Min", self.epsilon_min_var)
         self._entry(settings, 7, "Epsilon Decay", self.epsilon_decay_var)
         self._entry(settings, 8, "Random Seed", self.seed_var)
-        ttk.Checkbutton(settings, text="Slippery", variable=self.slippery_var).grid(row=9, column=0, columnspan=2, sticky="w", pady=3)
-        ttk.Checkbutton(settings, text="Policy-Pfeile anzeigen", variable=self.show_policy_var, command=self.draw_grid).grid(row=10, column=0, columnspan=2, sticky="w")
+        self.animation_checkbutton = ttk.Checkbutton(
+            settings, text="Animation anzeigen",
+            variable=self.animation_enabled_var,
+            command=self._toggle_animation_controls,
+        )
+        self.animation_checkbutton.grid(row=9, column=0, columnspan=2, sticky="w", pady=(4, 2))
+        ttk.Label(settings, text="Animationsintervall (ms)").grid(row=10, column=0, sticky="w", pady=2, padx=(0, 6))
+        self.animation_delay_entry = ttk.Entry(settings, textvariable=self.animation_delay_var, width=12)
+        self.animation_delay_entry.grid(row=10, column=1, sticky="ew", pady=2)
         self.apply_button = ttk.Button(settings, text="Einstellungen anwenden und zurücksetzen", command=self.apply_settings)
         self.apply_button.grid(row=11, column=0, columnspan=2, sticky="ew", pady=(6, 0))
         settings.columnconfigure(1, weight=1)
@@ -135,11 +148,16 @@ class CliffWalkingGUI:
 
     def _build_workspace(self, parent: ttk.Frame) -> None:
         parent.columnconfigure(0, weight=1)
-        parent.rowconfigure(0, weight=3)
+        parent.rowconfigure(0, weight=1)
         parent.rowconfigure(1, weight=2)
-        self.grid_canvas = tk.Canvas(parent, bg="white", highlightthickness=1, highlightbackground="#cbd5e1")
-        self.grid_canvas.grid(row=0, column=0, sticky="nsew")
-        self.grid_canvas.bind("<Configure>", lambda _event: self.draw_grid())
+        state_frame = ttk.LabelFrame(parent, text="Offizielles Gymnasium-Spielfeld", padding=18)
+        state_frame.grid(row=0, column=0, sticky="nsew")
+        self.environment_image = ttk.Label(state_frame, anchor="center")
+        self.environment_image.pack(fill="both", expand=True)
+        ttk.Label(
+            state_frame, textvariable=self.state_var, justify="left",
+            font=("TkFixedFont", 11),
+        ).pack(anchor="center", pady=(8, 0))
         figure = Figure(figsize=(8, 3), dpi=100)
         self.return_axes = figure.add_subplot(111)
         self.return_canvas = FigureCanvasTkAgg(figure, master=parent)
@@ -162,7 +180,7 @@ class CliffWalkingGUI:
         }
         # Constructors perform the detailed range validation atomically.
         create_policy(self.method_var.get(), **policy_parameters)
-        CliffWalkingEnvironment(bool(self.slippery_var.get()), max_steps, seed).close()
+        CliffWalkingEnvironment(max_steps=max_steps, seed=seed).close()
         return {"episodes": episodes, "max_steps": max_steps, "seed": seed, "policy": policy_parameters}
 
     def _input_signature(self) -> tuple[object, ...]:
@@ -170,7 +188,7 @@ class CliffWalkingGUI:
         return (
             self.method_var.get(), self.max_steps_var.get(), self.alpha_var.get(),
             self.gamma_var.get(), self.epsilon_start_var.get(), self.epsilon_min_var.get(),
-            self.epsilon_decay_var.get(), self.seed_var.get(), self.slippery_var.get(),
+            self.epsilon_decay_var.get(), self.seed_var.get(),
         )
 
     def _sync_settings(self) -> bool:
@@ -184,8 +202,12 @@ class CliffWalkingGUI:
         try:
             parameters = self._read_parameters()
             environment = CliffWalkingEnvironment(
-                bool(self.slippery_var.get()), int(parameters["max_steps"]), parameters["seed"]
+                max_steps=int(parameters["max_steps"]), seed=parameters["seed"]
             )
+            # Initialize Gymnasium's Pygame surface before the current
+            # renderer is closed. This avoids reinitializing Pygame beside Tk
+            # on macOS/Python 3.13.
+            environment.render_rgb()
             policy = create_policy(self.method_var.get(), **parameters["policy"])
         except (TypeError, ValueError) as error:
             messagebox.showerror("Ungültige Einstellungen", str(error), parent=self.root)
@@ -228,10 +250,39 @@ class CliffWalkingGUI:
             return
         self._start_animation(training=False)
 
+    def _toggle_animation_controls(self) -> None:
+        self.animation_delay_entry.configure(
+            state="normal" if self.animation_enabled_var.get() else "disabled"
+        )
+
+    def _animation_delay(self) -> int:
+        try:
+            delay = int(self.animation_delay_var.get())
+        except ValueError as error:
+            raise ValueError("Animationsintervall muss eine ganze Zahl sein.") from error
+        if not 1 <= delay <= 5_000:
+            raise ValueError("Animationsintervall muss zwischen 1 und 5000 ms liegen.")
+        return delay
+
     def _start_animation(self, training: bool) -> None:
         if self.training_running or self.animation_running:
             return
         if not self._sync_settings():
+            return
+        if not self.animation_enabled_var.get():
+            result = self.agent.run_episode(training=training)
+            kind = "Trainingsepisode" if training else "Greedy-Auswertung"
+            reason = "Ziel erreicht" if result.success else "Max. Schritte erreicht"
+            self.status_var.set(
+                f"{kind} ohne Animation: {reason}, Return {result.total_reward:.0f}, "
+                f"Cliff-Fälle {result.cliff_falls}."
+            )
+            self._refresh_all()
+            return
+        try:
+            self._animation_delay_ms = self._animation_delay()
+        except ValueError as error:
+            messagebox.showerror("Ungültige Einstellung", str(error), parent=self.root)
             return
         self.animation_running = True
         self.stop_requested = False
@@ -259,8 +310,8 @@ class CliffWalkingGUI:
         transition = self.agent.step(training=self._animation_training)
         if transition.fell_into_cliff:
             self.status_var.set("Cliff-Fall: Reward -100, Agent kehrt zum Start zurück.")
-        self._refresh_all()
-        self.root.after(90, self._animation_tick)
+        self._refresh_state()
+        self.root.after(self._animation_delay_ms, self._animation_tick)
 
     def start_training(self) -> None:
         if self.training_running or self.animation_running:
@@ -308,6 +359,11 @@ class CliffWalkingGUI:
         for button in (self.apply_button, self.step_button, self.episode_button, self.train_button, self.evaluate_button, self.reset_button, self.q_button):
             button.configure(state=normal)
         self.method_box.configure(state="disabled" if busy else "readonly")
+        self.animation_checkbutton.configure(state="disabled" if busy else "normal")
+        if busy:
+            self.animation_delay_entry.configure(state="disabled")
+        else:
+            self._toggle_animation_controls()
         self.stop_button.configure(state="normal" if busy else "disabled")
 
     def _refresh_all(self) -> None:
@@ -324,94 +380,33 @@ class CliffWalkingGUI:
             f"Cliff-Fälle: {falls}\n"
             f"Letzter Return: {returns[-1] if returns else '—'}"
         )
-        self.draw_grid()
+        self._refresh_state()
         self.draw_plot()
 
-    def draw_grid(self) -> None:
-        if not hasattr(self, "grid_canvas"):
-            return
-        canvas = self.grid_canvas
-        canvas.delete("all")
-        width, height = max(canvas.winfo_width(), 720), max(canvas.winfo_height(), 300)
-        cell = min((width - 30) / 12, (height - 30) / 4)
-        x0, y0 = (width - 12 * cell) / 2, (height - 4 * cell) / 2
-        trajectory = self.agent.current_transitions
-        if not trajectory and self.agent.latest_result is not None:
-            trajectory = self.agent.latest_result.transitions
-        path = {item.next_observation for item in trajectory}
-        for row in range(4):
-            for column in range(12):
-                position = (row, column)
-                observation = row * 12 + column
-                fill = "#f8fafc"
-                if position in self.environment.cliff_positions:
-                    fill = "#ef4444"
-                elif position == self.environment.start_position:
-                    fill = "#86efac"
-                elif position == self.environment.goal_position:
-                    fill = "#fde047"
-                elif observation in path:
-                    fill = "#dbeafe"
-                x1, y1 = x0 + column * cell, y0 + row * cell
-                canvas.create_rectangle(x1, y1, x1 + cell, y1 + cell, fill=fill, outline="#64748b")
-                canvas.create_text(x1 + 4, y1 + 4, text=str(observation), anchor="nw", fill="#64748b", font=("TkDefaultFont", 8))
-                if position == self.environment.start_position:
-                    canvas.create_text(x1 + cell / 2, y1 + cell * .78, text="START", fill="#166534", font=("TkDefaultFont", 8, "bold"))
-                elif position == self.environment.goal_position:
-                    canvas.create_text(x1 + cell / 2, y1 + cell * .78, text="ZIEL", fill="#92400e", font=("TkDefaultFont", 8, "bold"))
-                elif position in self.environment.cliff_positions:
-                    canvas.create_text(x1 + cell / 2, y1 + cell / 2, text="CLIFF", fill="white", font=("TkDefaultFont", 8, "bold"))
-                if self.show_policy_var.get() and position not in self.environment.cliff_positions and position != self.environment.goal_position:
-                    if self.agent.policy.visit_counts[observation] > 0:
-                        arrows = "".join(ACTION_ARROWS[action] for action in self.agent.policy.best_actions(observation))
-                    else:
-                        arrows = "?"
-                    canvas.create_text(x1 + cell / 2, y1 + cell * .43, text=arrows, fill="#1e3a8a", font=("TkDefaultFont", 11, "bold"))
-
-        # Draw the executed trajectory on top of the cells. Limit very long
-        # failed episodes so that the newest part remains readable.
-        action_deltas = {0: (-1, 0), 1: (0, 1), 2: (1, 0), 3: (0, -1)}
-        for transition in trajectory[-100:]:
-            row, column = self.environment.observation_to_position(transition.observation)
-            start_x = x0 + (column + .5) * cell
-            start_y = y0 + (row + .5) * cell
-            if transition.fell_into_cliff:
-                delta_row, delta_column = action_deltas[transition.action]
-                target_row, target_column = row + delta_row, column + delta_column
-                end_x = x0 + (target_column + .5) * cell
-                end_y = y0 + (target_row + .5) * cell
-                canvas.create_line(
-                    start_x, start_y, end_x, end_y,
-                    fill="#b91c1c", width=4, dash=(5, 3), arrow="last",
-                )
-                canvas.create_text(
-                    end_x, end_y, text="×", fill="white",
-                    font=("TkDefaultFont", 18, "bold"),
-                )
-                continue
-            next_row, next_column = self.environment.observation_to_position(
-                transition.next_observation
-            )
-            end_x = x0 + (next_column + .5) * cell
-            end_y = y0 + (next_row + .5) * cell
-            if (row, column) == (next_row, next_column):
-                radius_loop = min(12, cell * .16)
-                canvas.create_oval(
-                    start_x - radius_loop, start_y - radius_loop,
-                    start_x + radius_loop, start_y + radius_loop,
-                    outline="#7c3aed", width=3,
-                )
-            else:
-                canvas.create_line(
-                    start_x, start_y, end_x, end_y,
-                    fill="#2563eb", width=4, arrow="last",
-                    arrowshape=(10, 12, 5),
-                )
-        row, column = self.environment.observation_to_position(self.environment.observation)
-        cx, cy = x0 + (column + .5) * cell, y0 + (row + .5) * cell
-        radius = min(18, cell * .2)
-        canvas.create_oval(cx-radius, cy-radius, cx+radius, cy+radius, fill="#2563eb", outline="white", width=2)
-        canvas.create_text(cx, cy, text="A", fill="white", font=("TkDefaultFont", 10, "bold"))
+    def _refresh_state(self) -> None:
+        frame = self.environment.render_rgb()
+        image = Image.fromarray(frame)
+        image.thumbnail((900, 360), Image.Resampling.LANCZOS)
+        self._environment_photo = ImageTk.PhotoImage(image)
+        self.environment_image.configure(image=self._environment_photo)
+        observation = self.environment.observation
+        row, column = self.environment.observation_to_position(observation)
+        lines = [
+            f"Observation: {observation}",
+            f"Position:    ({row}, {column})",
+            f"Schritt:     {self.environment.step_count}",
+            f"Return:      {self.environment.total_reward:.0f}",
+        ]
+        if self.agent.current_transitions:
+            transition = self.agent.current_transitions[-1]
+            lines.extend((
+                f"Action:      {ACTION_NAMES[transition.action]} ({transition.action})",
+                f"Reward:      {transition.reward:.0f}",
+                f"Cliff-Fall:  {'ja' if transition.fell_into_cliff else 'nein'}",
+            ))
+        else:
+            lines.extend(("Action:      —", "Reward:      —", "Cliff-Fall:  nein"))
+        self.state_var.set("\n".join(lines))
 
     def draw_plot(self) -> None:
         axes = self.return_axes
@@ -461,10 +456,9 @@ class CliffWalkingGUI:
         messagebox.showinfo(
             "Bedienungsanleitung",
             "1. Methode und Parameter einstellen.\n"
-            "2. Einstellungen anwenden.\n"
-            "3. N Episoden trainieren.\n"
-            "4. Policy-Pfeile und Return-Kurve untersuchen.\n"
-            "5. Gelernte Policy ohne Exploration ausführen.\n\n"
+            "2. N Episoden trainieren; Änderungen werden automatisch übernommen.\n"
+            "3. Zustandsanzeige und Return-Kurve untersuchen.\n"
+            "4. Gelernte Policy ohne Exploration ausführen.\n\n"
             "Ein normaler Schritt kostet -1. Ein Cliff-Fall kostet -100 und setzt den Agenten "
             "zum Start zurück. SARSA lernt häufig einen sichereren Weg; Q-Learning häufig den "
             "kürzeren Weg nahe am Cliff.",

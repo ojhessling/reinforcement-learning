@@ -344,7 +344,14 @@ nicht einfrieren.
 - Plot-Updates begrenzen, beispielsweise auf `5–10` Aktualisierungen pro
   Sekunde
 - Massentraining ohne Einzelbildanimation
-- sichtbare Evaluation optional animieren
+- sichtbare Episoden und Evaluationen besitzen eine Option
+  `Animation anzeigen`
+- das Animationsintervall ist in Millisekunden einstellbar; Standardwert
+  `10 ms`, sofern der projektspezifische Prompt nichts anderes festlegt
+- bei deaktivierter Animation ohne Einzelbilder ausführen und nur das
+  Endergebnis darstellen
+- das Intervall steuert die Zeit zwischen zwei sichtbaren Agentenschritten und
+  nicht die Trainingsgeschwindigkeit des Massentrainings
 - Abbruch regelmäßig an sicheren Grenzen prüfen
 - beim Schließen Worker beenden und Ressourcen freigeben
 

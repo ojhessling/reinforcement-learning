@@ -1,840 +1,281 @@
-# CliffWalking – Reinforcement-Learning-Workbench
+# CliffWalking – vollständige Workbench
 
 Projektordner: `Oliver/04-cliffwalking`
 
-Berücksichtige die verbindlichen allgemeinen Regeln aus `../workbench.md`.
+## Grundlage
 
-## Rolle und Zielgruppe
+Berücksichtige alle verbindlichen Regeln aus `../workbench.md`, insbesondere
+Sprache und Benennung, Architektur, responsive GUI, atomare
+Parameterübernahme, Training/Evaluation, Reproduzierbarkeit, Visualisierung,
+Export, Tests, README und Abnahmekriterien.
 
-Erstelle eine lokale Lernanwendung für einen Developer und
-Reinforcement-Learning-Anfänger. Die Anwendung soll fachlich korrekt,
-nachvollziehbar und eigenständig lauffähig sein.
-
-GUI-Texte, Hilfetexte, Validierungsfehler, Dokumentation und Kommentare werden
-auf Deutsch formuliert. Datei-, Klassen-, Methoden- und Variablennamen bleiben
-auf Englisch.
+Dieser Prompt beschreibt nur die CliffWalking-spezifischen Anforderungen. Er
+ist die Ausbaustufe nach `prompt_v1.md`.
 
 ## Ziel
 
-Implementiere eine lokale Tkinter-Anwendung namens `cliff_walker`, die das
-Gymnasium-Environment `CliffWalking-v1` visualisiert und unterschiedliche
-modellfreie Reinforcement-Learning-Methoden trainiert und vergleicht.
+Erweitere die lokale Tkinter-Lernanwendung für Gymnasiums
+`CliffWalking-v1`. Sie soll den Unterschied zwischen sicheren und riskanten
+Policies sowie zwischen On-Policy-, Off-Policy- und Deep-Q-Verfahren zeigen.
 
-Die Anwendung soll insbesondere zeigen:
-
-- warum eine kürzere Route am Cliff riskanter sein kann
-- warum On-Policy- und Off-Policy-Verfahren unterschiedliche Wege lernen
-- wie Epsilon-Exploration die Sicherheit und den Return beeinflusst
-- wie sich tabellarische Verfahren und Deep-Q-Verfahren unterscheiden
-- wie stabil Ergebnisse über mehrere Seeds und Wiederholungen sind
-
-Die Anwendung läuft lokal ohne Webserver.
-
-## Verbindliche fachliche Entscheidung
-
-Der ursprüngliche Entwurf nennt gleichzeitig `VDQN`, `DDQN`, Q-Learning,
-SARSA, Expected SARSA und Stable-Baselines3. Daraus wird folgende konsistente
-Methodenauswahl:
-
-### Tabellarische Methoden
+Methoden:
 
 - `QLearning`
 - `Sarsa`
 - `ExpectedSarsa`
+- `VanillaDQN` mit `stable_baselines3.DQN`
+- `DoubleDQN` als eigene PyTorch-Implementierung
 
-### Deep-Q-Methoden
+Stable-Baselines3 enthält kein Double DQN. `DoubleDQN` darf daher nicht nur
+ein umbenanntes Stable-Baselines3-Modell sein.
 
-- `VanillaDQN`: Verwendung von `stable_baselines3.DQN`
-- `DoubleDQN`: eigene, klar abgegrenzte PyTorch-Implementierung auf Basis
-  derselben Netzwerk-, Replay-Buffer- und Trainingsschnittstellen
+## Dateien und Abhängigkeiten
 
-`VDQN` wird im Code und in der GUI nicht als Abkürzung verwendet, sondern
-eindeutig `Vanilla DQN` genannt.
-
-Stable-Baselines3 enthält Vanilla DQN, aber kein Double DQN. Deshalb darf
-`DoubleDQN` nicht lediglich ein zweites Stable-Baselines3-DQN mit anderem Namen
-sein.
-
-## Voraussetzungen
-
-- zentrales Conda-Environment `rl-26-08`
-- Python 3.13
-- Gymnasium
-- `CliffWalking-v1`
-- Tkinter
-- Matplotlib
-- NumPy
-- Pillow
-- Stable-Baselines3
-- PyTorch
-- keine Webanwendung und kein Webserver
-- responsive GUI während Training und Vergleich
-- reproduzierbare Experimente über Random Seeds
-
-Ergänze die benötigten Pakete in `../environment.yml`. Installiere keine
-virtuelle Umgebung innerhalb des Projektordners.
-
-## Zu erstellende Dateien
-
-- `cliff_walking_logic.py`: Environment-Adapter, tabellarische Methoden,
-  Deep-Q-Komponenten, Agenten, Training, Evaluation und Vergleich; keine
-  Tkinter-Abhängigkeiten
-- `cliff_walking_gui.py`: Tkinter-Oberfläche und Matplotlib-Diagramme
-- `cliff_walking_app.py`: ausschließlich Entry Point
-- `README.md`: Installation, Start, Bedienung und fachliche Erklärung
-- `requirements.txt`: direkte Projektabhängigkeiten
-- `tests/test_cliff_walking_logic.py`: Unit- und Regressionstests ohne GUI
-- `tests/test_cliff_walking_smoke.py`: kurze Integrations- und Importtests
-
-Die Anwendung ist von den Gridworld-Projekten in `../02-gridworld_model_based`
-und `../03-gridworld_model_free` getrennt. Dateien oder veränderlicher Zustand
-dürfen nicht projektübergreifend importiert werden.
-
-## Architektur
-
-### `CliffWalkingEnvironment`
-
-Kapselt das Gymnasium-Environment:
+Mindestens:
 
 ```text
-gymnasium.make(
-    "CliffWalking-v1",
-    is_slippery=False,
-    render_mode="rgb_array",
-)
+cliff_walking_app.py
+cliff_walking_logic.py
+cliff_walking_gui.py
+README.md
+requirements.txt
+tests/test_cliff_walking_logic.py
+tests/test_cliff_walking_smoke.py
 ```
 
-Verantwortlichkeiten:
+Größere Deep-Q- oder Vergleichskomponenten dürfen gemäß `../workbench.md` in
+eigene Module ausgelagert werden. Benötigt werden Gymnasium, NumPy,
+Matplotlib, Tkinter, Pillow, `pygame`, PyTorch und Stable-Baselines3. Ergänze direkte
+Abhängigkeiten in `requirements.txt` und in `../environment.yml`.
 
-- Erzeugen und Schließen des Gymnasium-Environments
-- Weiterreichen von `reset(seed=...)` und `step(action)`
-- einheitliche Verarbeitung von `terminated` und `truncated`
-- zusätzliches Episodenlimit `max_steps`
-- Umrechnung zwischen Observation und `(row, column)`
-- Erkennung eines Cliff-Falls
-- Statistik für Schritte, Cliff-Fälle und Episoden-Return
-- Bereitstellung eines RGB-Frames für die GUI
+## Environment
 
-Schnittstelle:
-
-```text
-reset(seed=None) -> observation
-step(action) -> StepResult
-render_rgb() -> np.ndarray
-observation_to_position(observation) -> Tuple[int, int]
-position_to_observation(position) -> int
-close() -> None
+```python
+gymnasium.make("CliffWalking-v1", render_mode="rgb_array")
 ```
 
-`StepResult` enthält:
-
-```text
-observation: int
-action: int
-next_observation: int
-reward: float
-terminated: bool
-truncated: bool
-done: bool
-fell_into_cliff: bool
-termination_reason: Optional[str]
-step: int
-```
-
-### `BaseAgent`
-
-Gemeinsame Schnittstelle aller Methoden:
-
-```text
-reset(seed=None) -> None
-select_action(observation, training=True) -> int
-observe(step_result) -> None
-end_episode() -> None
-train_episode(environment) -> EpisodeResult
-evaluate_episode(environment) -> EpisodeResult
-save(path) -> None
-load(path) -> None
-```
-
-Gemeinsame Eigenschaften:
-
-```text
-name: str
-gamma: float
-seed: Optional[int]
-training_steps: int
-episodes_completed: int
-```
-
-Tabellarische und Deep-Q-Agenten dürfen intern unterschiedlich arbeiten,
-liefern nach außen aber dieselben Ergebnisobjekte.
-
-### Ergebnisobjekte
-
-`EpisodeResult` enthält:
-
-```text
-method: str
-episode: int
-transitions: List[StepResult]
-total_reward: float
-steps: int
-cliff_falls: int
-success: bool
-termination_reason: str
-epsilon: float
-seed: Optional[int]
-```
-
-`TrainingPoint` enthält:
-
-```text
-episode: int
-environment_steps: int
-training_return: float
-moving_average_return: float
-evaluation_return: Optional[float]
-success: bool
-cliff_falls: int
-epsilon: float
-loss: Optional[float]
-```
-
-`ComparisonResult` enthält:
-
-```text
-method: str
-repetition: int
-seed: int
-training_points: List[TrainingPoint]
-final_evaluation_returns: List[float]
-mean_final_return: float
-success_rate: float
-mean_cliff_falls: float
-mean_episode_length: float
-runtime_seconds: float
-completed: bool
-```
-
-### `TrainingRunner`
-
-Verantwortlichkeiten:
-
-- Training einer ausgewählten Methode
-- Fortschrittsmeldungen an die GUI
-- sichere Abbruchprüfung zwischen vollständigen Schritten oder Updates
-- regelmäßige Evaluation ohne Exploration
-- keine direkten Tkinter-Aufrufe
-
-### `ComparisonRunner`
-
-Verantwortlichkeiten:
-
-- isoliertes Training aller ausgewählten Methoden
-- identische Environment-Einstellungen
-- reproduzierbar abgeleitete Seeds
-- gleiche Anzahl Environment-Schritte als faire Vergleichsbasis
-- Aggregation über Wiederholungen
-- Konfidenzintervalle
-- keine Veränderung des sichtbaren Agenten oder seiner Tabellen beziehungsweise
-  Netze
-
-## Definition von `CliffWalking-v1`
-
-### Grid
-
-- feste Größe: `4 x 12`
+- Grid: `4 x 12`
 - Start: `(3, 0)`
 - Ziel: `(3, 11)`
 - Cliff: `(3, 1)` bis `(3, 10)`
-- Observation Space: `Discrete(48)`
-- Action Space: `Discrete(4)`
+- Observation: `row * 12 + column`
+- Actions: `0 Up`, `1 Right`, `2 Down`, `3 Left`
+- normaler Schritt: Reward `-1`
+- Cliff-Fall: Reward `-100`, Rückkehr zum Start, nicht terminal
+- Ziel: `terminated=True`
+- `max_steps`: erzeugt `truncated=True`, Standard `500`
 
-Die Position wird als `(row, column)` dargestellt. Gymnasium codiert eine
-Position als:
+`CliffWalkingEnvironment` kapselt Gymnasium, Positionsumrechnung,
+Cliff-Erkennung, Episodenlimit und RGB-Rendering. Ein `StepResult` unterscheidet
+`terminated`, `truncated` und `done` und enthält Reward, Positionen, Action,
+Schrittzahl, Cliff-Fall und Abbruchgrund.
 
-```text
-observation = row * 12 + column
-```
-
-### Aktionen
-
-- Action `0`: Up
-- Action `1`: Right
-- Action `2`: Down
-- Action `3`: Left
-
-Verwende genau diese Gymnasium-Reihenfolge. Sie unterscheidet sich von der
-Action-Reihenfolge des vorherigen Gridworld-Projekts.
-
-### Rewards
-
-- normaler Schritt: `-1`
-- Schritt in das Cliff: `-100`
-- beim Cliff-Fall wird der Agent auf den Start zurückgesetzt
-- ein Cliff-Fall beendet die Episode nicht
-- das Ziel beendet die Episode
-
-### `is_slippery`
-
-- Checkbox `Slippery`
-- Standardwert `False`
-- Änderung erzeugt ein neues Environment und setzt Training und Evaluation
-  zurück
-- bei `True` wird die von Gymnasium bereitgestellte stochastische Variante
-  verwendet
-- GUI zeigt die tatsächlich ausgeführte und nicht nur die gewählte Action
-
-### Episodenlimit
-
-Da eine schlechte Policy das Ziel möglicherweise nie erreicht, wird jede
-Episode zusätzlich durch `max_steps` begrenzt.
-
-- Standardwert: `500`
-- positive Ganzzahl
-- bei Erreichen: `truncated=True`
-- `termination_reason="max_steps"`
-- kein Programmabbruch und keine Endlosschleife
+Bei `terminated` und `truncated` wird in allen fünf Verfahren nicht
+gebootstrapt. Diese Entscheidung muss in Code, Tests und README übereinstimmen.
 
 ## Tabellarische Methoden
 
-### Gemeinsame Q-Tabelle
+Gemeinsame Q-Tabelle:
 
 ```text
-q_values[observation][action]
+q_values[48][4]
 ```
 
-Initialisierung mit `0.0`. Form: `48 x 4`.
-
-### Epsilon-greedy Action-Auswahl
-
-```text
-if random() < epsilon:
-    action = random_action
-else:
-    action = random_choice(best_actions)
-```
-
-Bei mehreren gleich guten Actions erfolgt reproduzierbares zufälliges
-Tie-Breaking. Kein Action-Index darf systematisch bevorzugt werden.
-
-Epsilon-Verlauf pro abgeschlossener Trainingsepisode:
+Epsilon-greedy verwendet zufälliges, reproduzierbares Tie-Breaking. Epsilon
+wird nach jeder Trainingsepisode aktualisiert:
 
 ```text
 epsilon = max(epsilon_min, epsilon * epsilon_decay)
 ```
 
-Evaluation verwendet immer `epsilon = 0.0` und verändert weder Q-Werte noch
-Epsilon oder Trainingsstatistiken.
-
-### `QLearning`
-
-Off-Policy-Update:
+Updates:
 
 ```text
-target = reward                         if done
-target = reward + gamma * max(Q(s', a')) otherwise
-Q(s, a) += alpha * (target - Q(s, a))
+Q-Learning:
+target = reward if done else reward + gamma * max(Q(next_state))
+
+SARSA:
+target = reward if done else reward + gamma * Q(next_state, next_action)
+
+Expected SARSA:
+target = reward if done else reward + gamma * expected_q(next_state)
+
+Q(state, action) += alpha * (target - Q(state, action))
 ```
 
-### `Sarsa`
-
-On-Policy-Update:
-
-```text
-target = reward                              if done
-target = reward + gamma * Q(s', next_action) otherwise
-Q(s, a) += alpha * (target - Q(s, a))
-```
-
-Die für das SARSA-Update ausgewählte `next_action` muss im nächsten Schritt
-tatsächlich ausgeführt werden. Sie darf nicht erneut ausgewählt und verworfen
-werden.
-
-### `ExpectedSarsa`
-
-```text
-target = reward + gamma * expected_q(next_observation)
-```
-
-`expected_q` verwendet exakt die aktuelle Epsilon-greedy
-Wahrscheinlichkeitsverteilung. Gleichstände der besten Actions werden
-gleichmäßig berücksichtigt.
+SARSA führt die für das Update ausgewählte `next_action` tatsächlich als
+nächste Action aus. Expected SARSA verwendet die vollständige aktuelle
+Epsilon-greedy-Verteilung und verteilt Greedy-Wahrscheinlichkeit bei Ties
+gleichmäßig.
 
 ## Deep-Q-Methoden
 
-### Beobachtungscodierung
+Diskrete Observations werden als One-Hot-Vektoren mit 48 Elementen codiert.
+Training und Evaluation verwenden denselben Wrapper.
 
-Die diskrete Observation wird für das neuronale Netz eindeutig codiert.
-Bevorzugt wird ein One-Hot-Vektor mit 48 Elementen. Eine reine unskalierte
-Ganzzahl als einzelnes kontinuierliches Merkmal ist nicht zulässig.
+### Vanilla DQN
 
-Dokumentiere den notwendigen Gymnasium-Wrapper und stelle sicher, dass Training
-und Evaluation dieselbe Codierung verwenden.
+Verwende `stable_baselines3.DQN("MlpPolicy", wrapped_environment, ...)` mit
+Callback für Fortschritt, Evaluation und Abbruch.
 
-### `VanillaDQN`
+### Double DQN
 
-Verwendet:
+Implementiere mit PyTorch:
 
-```text
-stable_baselines3.DQN("MlpPolicy", wrapped_environment, ...)
-```
+- `ReplayBuffer` und `QNetwork`
+- Online- und Target-Netz
+- Adam, Huber Loss und Gradient Clipping
+- periodisches Target-Network-Update
+- Speichern und Laden inklusive Metadaten
 
-Stable-Baselines3 verwaltet Replay Buffer, Target Network, Optimizer und
-Gradient Clipping. Implementiere einen Callback für Fortschritt, Evaluation,
-Abbruch und Messwerte.
-
-### `DoubleDQN`
-
-Eigene PyTorch-Implementierung. Sie verwendet dieselbe Grundstruktur wie
-Vanilla DQN, aber das Target wird getrennt ausgewählt und ausgewertet:
+Double-DQN-Target:
 
 ```text
-best_next_action = online_network(next_state).argmax()
-next_q = target_network(next_state)[best_next_action]
-target = reward + gamma * next_q
+best_action = online_network(next_state).argmax()
+next_q = target_network(next_state)[best_action]
+target = reward if done else reward + gamma * next_q
 ```
 
-Bei terminalen oder abgeschnittenen Übergängen wird kein zukünftiger Wert
-addiert.
-
-Erforderliche Komponenten:
-
-- `ReplayBuffer`
-- `QNetwork`
-- `DoubleDQNAgent`
-- Online Network
-- Target Network
-- Adam-Optimizer
-- Huber Loss
-- Gradient Clipping
-- periodische Target-Network-Aktualisierung
-- Modell speichern und laden
-
-## Parameter und Standardwerte
-
-### Allgemein
-
-- `method`: `Sarsa`
-- `episodes`: `500`
-- `max_steps`: `500`
-- `gamma`: `0.99`
-- `seed`: `42`
-- `is_slippery`: `False`
-- `evaluation_interval`: `25`
-- `evaluation_episodes`: `10`
-- `animation_delay_ms`: `100`
-
-### Tabellarisch
-
-- `alpha`: `0.5`
-- `epsilon_start`: `1.0`
-- `epsilon_min`: `0.05`
-- `epsilon_decay`: `0.995`
-
-### Vanilla DQN und Double DQN
-
-- `learning_rate`: `0.0005`
-- `buffer_size`: `50_000`
-- `learning_starts`: `1_000`
-- `batch_size`: `64`
-- `tau`: `1.0`
-- `train_frequency`: `4`
-- `gradient_steps`: `1`
-- `target_update_interval`: `500`
-- `exploration_initial_epsilon`: `1.0`
-- `exploration_final_epsilon`: `0.05`
-- `exploration_fraction`: `0.3`
-- `max_gradient_norm`: `10.0`
-- `network_architecture`: `64,64`
-- `activation_function`: `ReLU`
-
-Alle numerischen Eingaben werden vor dem Start vollständig validiert.
-Fehlerhafte Eingaben verändern das laufende Experiment nicht.
-
-## Dynamische Parameteranzeige
-
-Zeige nur Parameter, die für die ausgewählte Methode relevant sind:
-
-- `QLearning`, `Sarsa`, `ExpectedSarsa`: Alpha und tabellarische
-  Epsilon-Parameter
-- `VanillaDQN`, `DoubleDQN`: Replay-Buffer-, Netzwerk-, Optimizer-, Target- und
-  Deep-Epsilon-Parameter
-- `DoubleDQN`: zusätzlich Erklärung des Double-DQN-Targets
-
-Allgemeine Parameter bleiben immer sichtbar.
-
-Parameteränderungen werden beim Start einer Aktion automatisch übernommen.
-Ein separater Anwenden-Button darf zusätzlich existieren, ist aber nicht
-erforderlich.
-
-## GUI-Aufbau
-
-### Kopfbereich
-
-- Titel `CliffWalking RL Workbench`
-- Untertitel `Sichere und riskante Policies vergleichen`
-- Status für Methode, Episode, Schritt und Trainingszustand
-- Button `Bedienungsanleitung`
-
-### Linkes Bedienpanel
-
-Environment:
-
-- Checkbox `Slippery`
-- `Max. Schritte`
-- `Random Seed`
-- Button `Environment zurücksetzen`
-
-Methode und Training:
-
-- Dropdown mit allen fünf Methoden
-- dynamische Hyperparameter
-- `Episoden`
-- `Evaluation alle N Episoden`
-- `Evaluationsepisoden`
-
-Steuerung:
-
-- `Einzelschritt`
-- `Eine Episode trainieren`
-- `N Episoden trainieren`
-- `Training stoppen`
-- `Gelernte Policy ausführen`
-- `Training zurücksetzen`
-- `Modell speichern`
-- `Modell laden`
-- `Q-Tabelle` nur für tabellarische Methoden
-- `Netzwerk-Informationen` nur für Deep-Q-Methoden
-
-### CliffWalking-Ansicht
-
-Zeige das vollständige `4 x 12`-Grid:
-
-- Start grün
-- Ziel gelb
-- Cliff rot
-- normale Zellen hell
-- Agent als blauer Kreis
-- gewählte Action und tatsächlich ausgeführte Bewegung
-- aktueller Episodenpfad
-- Cliff-Fall als kurze rote Animation mit Rücksprung zum Start
-- optional Gymnasium-RGB-Frame
-
-Die eigene Grid-Darstellung ist die primäre Ansicht. Der Gymnasium-Frame kann
-in einem separaten Bereich oder per Umschalter angezeigt werden. Die GUI darf
-nicht von einem externen Pygame-Fenster abhängen.
-
-### Policy-Anzeige
-
-Für tabellarische Methoden:
-
-- optimale Action-Pfeile pro Zustand
-- alle gleich guten Actions anzeigen
-- unbesuchte Zustände als `?`
-- umschaltbare Anzeige von `V(s)`
-
-Für Deep-Q-Methoden:
-
-- Q-Netz für alle 48 One-Hot-Zustände auswerten
-- daraus greedy Pfeile ableiten
-- Auswertung ohne Gradienten
-
-### Summary
-
-- Methode
-- Trainingsepisoden
-- Environment-Schritte
-- aktuelles Epsilon
-- letzter Return
-- gleitender Durchschnitt der letzten 20 Episoden
-- Erfolgsrate
-- Cliff-Fälle insgesamt und pro Episode
-- durchschnittliche Episodenlänge
-- letzter Evaluations-Return
-- aktuelle Loss nur bei Deep-Q-Methoden
-- Abbruchgrund der letzten Episode
-
-## Diagramme
-
-Verwende Matplotlib und Tabs:
-
-### `Training`
-
-- dünne Linie: Return jeder Trainingsepisode
-- fette Linie: gleitender Durchschnitt über 20 Episoden
-- Markierungen für regelmäßige greedy Evaluationen
-- unterschiedliche Farben pro Methode
-
-### `Cliff-Fälle`
-
-- Cliff-Fälle je Episode
-- gleitender Durchschnitt
-- optional kumulative Cliff-Fälle
-
-### `Episodenlänge`
-
-- Schritte je Episode
-- gleitender Durchschnitt
-
-### `Loss`
-
-- nur für Vanilla DQN und Double DQN sichtbar
-- geglättete Trainings-Loss
-- keine künstlichen Nullwerte vor `learning_starts`
-
-### `Methodenvergleich`
-
-- gemeinsame Lernkurven
-- Mittelwert über Wiederholungen
-- optionales 95-%-Konfidenzintervall
-- Tabelle mit finalem Return, Erfolgsrate, Cliff-Fällen, Episodenlänge und
-  Laufzeit
-
-## Methodenvergleich
-
-Einstellungen:
-
-- frei auswählbare Methoden
-- `training_steps` als gemeinsame Trainingsbasis
-- `repetitions`: Standard `10`
-- `base_seed`: Standard `42`
-- `evaluation_episodes`: Standard `20`
-- Checkbox `95-%-Konfidenzintervall`
-
-Gesamtumfang vor dem Start anzeigen:
-
-```text
-5 Methoden × 100.000 Schritte × 10 Wiederholungen
-```
-
-Fairnessregeln:
-
-- jede Wiederholung beginnt mit neuen Agenten und leerem Lernzustand
-- jede Methode erhält dieselben abgeleiteten Seeds
-- gleiche Anzahl Environment-Schritte
-- Evaluation immer ohne Exploration und ohne Lernupdates
-- tabellarische und Deep-Q-Methoden werden anhand derselben Evaluationsmetriken
-  verglichen
-- Vergleich läuft getrennt vom sichtbaren Experiment
-
-Fortschrittsanzeige:
-
-```text
-Methode 2 von 5: SARSA
-Wiederholung 4 von 10
-Schritte 35.000 von 100.000
-```
-
-`Stoppen` beendet nach dem aktuellen sicheren Update. Bereits vollständige
-Ergebnisse bleiben sichtbar; unvollständige Ergebnisse werden entsprechend
-markiert.
-
-## Trainings- und Animationsverhalten
-
-- Tkinter darf niemals aus einem Worker-Thread aktualisiert werden.
-- Training läuft in kleinen `after()`-Chunks oder in einem Worker mit Queue.
-- Deep-Q-Training blockiert die GUI nicht.
-- Einzelschritte und sichtbare Episoden werden animiert.
-- Massentraining läuft ohne Animation.
-- nach Abschluss sind alle Controls wieder aktiv
-- Exceptions werden abgefangen, angezeigt und setzen den Busy-Zustand zurück
-- beim Schließen werden Worker gestoppt und Environments geschlossen
-
-## Evaluation
-
-`Gelernte Policy ausführen`:
-
-- verwendet keine Exploration
-- verändert keine Tabellen, Netze, Replay Buffer oder Trainingsstatistiken
-- startet immer am Startzustand
-- endet bei Ziel oder `max_steps`
-- meldet verständlich, wenn noch keine brauchbare Policy gelernt wurde
-- bleibt auch bei einer zyklischen Policy bedienbar
-
-Bei `is_slippery=True` kann dieselbe Policy unterschiedliche Pfade erzeugen.
-Bewerte deshalb mehrere Evaluationsepisoden und zeige Mittelwert und
-Erfolgsrate.
-
-## Tabellen und Inspektion
-
-### Q-Tabelle
-
-Nur für tabellarische Methoden. Modaler, scrollbar bedienbarer Dialog mit:
-
-- Observation
-- Row und Column
-- Q Up, Q Right, Q Down, Q Left
-- beste Actions
-- Besuchszahl
-- Start, Ziel oder normaler Zustand
-- gelernt oder unbesucht
-
-Unbesuchte Werte werden als `—` dargestellt, nicht als vermeintlich gelernte
-Nullwerte.
-
-### Netzwerk-Informationen
-
-Für Deep-Q-Methoden:
-
-- Architektur
-- Anzahl trainierbarer Parameter
-- Replay-Buffer-Belegung
-- Training Steps
-- Gradient Steps
-- Target Updates
-- aktueller Loss
-- aktuelles Epsilon
-- Gerät `cpu`, `mps` oder `cuda`
-
-## Export und Persistenz
-
-### CSV-Export
-
-- Trainingshistorie
-- Evaluationshistorie
-- Vergleichsergebnisse
-- Q-Tabelle für tabellarische Methoden
-- UTF-8
-- Komma als Trennzeichen
-- Fließkommazahlen mit sechs Nachkommastellen
-- eindeutige Dateinamen ohne Überschreiben
-
-### Modell speichern und laden
+## Standardparameter
+
+Allgemein:
+
+- Methode: `Sarsa`
+- Episoden: `500`
+- Max. Schritte: `500`
+- Gamma: `0.99`
+- Seed: `42`
+- Evaluation alle `25` Episoden, jeweils `10` Episoden
+- Animation anzeigen: `True`
+- Animationsintervall: `10 ms`
 
 Tabellarisch:
 
-- Q-Tabelle als komprimierte NumPy-Datei oder JSON plus Metadaten
+- Alpha: `0.5`
+- Epsilon Start: `1.0`
+- Epsilon Minimum: `0.05`
+- Epsilon Decay: `0.995`
 
-Deep-Q:
+Deep Q:
 
-- Stable-Baselines3-ZIP für Vanilla DQN
-- PyTorch-Checkpoint für Double DQN
+- Learning Rate: `0.0005`
+- Buffer Size: `50_000`
+- Learning Starts: `1_000`
+- Batch Size: `64`
+- Train Frequency: `4`
+- Gradient Steps: `1`
+- Target Update Interval: `500`
+- Exploration Start/End: `1.0 / 0.05`
+- Exploration Fraction: `0.3`
+- Max. Gradient Norm: `10.0`
+- Netzwerk: `64, 64`, Aktivierung `ReLU`
 
-Metadaten enthalten mindestens:
+Die GUI zeigt nur Parameter der gewählten Methode. Änderungen werden beim
+Start einer Aktion automatisch und atomar übernommen.
 
-- Methode
-- Hyperparameter
-- Seed
-- `is_slippery`
-- Training Steps
-- Episoden
-- Softwareformat-Version
+## GUI und Bedienung
 
-Beim Laden werden Methode und Environment-Kompatibilität geprüft. Fehlerhafte
-oder inkompatible Dateien verändern den aktuellen Zustand nicht.
+Ergänzend zur Workbench:
 
-## Validierung und Fehlermeldungen
+- Zeige ausschließlich Gymnasiums offiziellen RGB-Frame skaliert in Tkinter.
+  Gemeint ist die Darstellung aus
+  `https://gymnasium.farama.org/environments/toy_text/cliff_walking/`.
+- Erstelle kein eigenes Grid, Canvas-Rendering, Weg-Overlay, Policy-Pfeile
+  oder andere Spielfeldgrafiken.
+- Aktualisiere den Frame nach `reset()` und jedem sichtbaren `step()`, erhalte
+  das Seitenverhältnis und öffne kein separates Pygame-Fenster.
+- Zeige Observation, Position, Action, Reward und Cliff-Fall zusätzlich als
+  Textstatus. Pillow bettet den von Gymnasium erzeugten Frame in Tkinter ein.
 
-Validiere mindestens:
+Steuerung:
 
-- positive Episoden-, Schritt- und Wiederholungszahlen
-- `0 <= gamma <= 1`
-- `0 < alpha <= 1`
-- `0 <= epsilon_min <= epsilon_start <= 1`
-- `0 < epsilon_decay <= 1`
-- positive Learning Rate
-- `buffer_size >= batch_size`
-- `learning_starts < buffer_size`
-- positive Netzwerkbreiten
-- bekannte Aktivierungsfunktion
-- gültiger optionaler Seed
-- vorhandene Abhängigkeiten
+- Einzelschritt und eine Episode animieren
+- N Episoden ohne Animation trainieren und sicher stoppen
+- gelernte Policy ohne Lernupdates ausführen
+- Training zurücksetzen
+- Q-Tabelle oder Netzwerk-Informationen öffnen
+- Modell speichern/laden
+- Bedienungsanleitung öffnen
 
-Fehlermeldungen nennen das betroffene Feld und einen gültigen Wertebereich.
-Einstellungen werden atomar übernommen: Entweder sind alle Werte gültig oder
-das aktive Experiment bleibt vollständig unverändert.
+Das Animationsintervall bestimmt die Pause zwischen zwei sichtbaren
+Agentenschritten. Bei deaktivierter Animation laufen Trainingsepisode und
+Evaluation ohne Einzelbilder und zeigen nur das Endergebnis. Massentraining
+bleibt immer ohne Animation.
 
-## Reproduzierbarkeit
+Eine zyklische oder noch unbrauchbare Policy darf die Anwendung nicht
+abbrechen oder blockieren. Sie endet nach `max_steps` mit einer verständlichen
+Meldung.
 
-Setze und dokumentiere Seeds für:
+Summary: Methode, Episoden, Environment-Schritte, Epsilon, letzter und
+gleitender Return, Erfolgsrate, Cliff-Fälle, Episodenlänge, Evaluation,
+Abbruchgrund und bei Deep Q der Loss.
 
-- Python `random`
-- NumPy
-- Gymnasium `reset(seed=...)`
-- Action Space
-- PyTorch
-- Stable-Baselines3
+Diagramm-Tabs:
 
-Für Deep Learning kann trotz Seeds plattformabhängige numerische Abweichung
-auftreten. Die README weist darauf hin.
+- Training: Episoden-Returns, gleitender Mittelwert und Evaluationen
+- Cliff-Fälle pro Episode
+- Episodenlänge
+- Loss nur für Deep-Q-Methoden
+- Methodenvergleich
 
-## Tests
+Die Q-Tabelle zeigt alle 48 Zustände, Position, vier Q-Werte, beste Actions und
+Besuchszahl. Unbesuchte Werte erscheinen als `—`. Netzwerk-Informationen
+zeigen Architektur, Parameterzahl, Buffer-Belegung, Updates, Loss, Epsilon und
+Gerät.
 
-### Environment
+## Methodenvergleich
 
-- Observation- und Positionsumrechnung
-- Action-Reihenfolge
-- normaler Reward `-1`
-- Cliff-Reward `-100`
-- Rücksprung zum Start nach Cliff-Fall
-- Cliff-Fall ist nicht terminal
-- Ziel ist terminal
-- `max_steps` erzeugt Truncation
-- `is_slippery=False` ist deterministisch
-- Seeds reproduzieren `is_slippery=True`
+Frei auswählbare Methoden werden isoliert mit gleicher Anzahl
+Environment-Schritte verglichen.
 
-### Tabellarische Methoden
+Standardwerte:
 
-- Q-Learning-Update
-- SARSA verwendet tatsächlich `next_action`
-- Expected-SARSA-Erwartungswert inklusive Ties
-- terminales Update ohne zukünftigen Wert
-- Epsilon-Grenzen und Decay
-- reproduzierbares Tie-Breaking
-- Evaluation verändert keine Lernwerte
+- Wiederholungen: `10`
+- Base Seed: `42`
+- Evaluationsepisoden: `20`
+- optionales 95-%-Konfidenzintervall
 
-### Replay Buffer und Netze
+Jede Wiederholung verwendet einen neuen Agenten und abgeleitete, zwischen den
+Methoden identische Seeds. Der Vergleich verändert den sichtbaren Agenten
+nicht. Zeige Lernkurven sowie finalen Return, Erfolgsrate, Cliff-Fälle,
+Episodenlänge und Laufzeit. Vor dem Start werden Gesamtumfang und Fortschritt
+verständlich angezeigt; Teilresultate bleiben nach Abbruch erhalten.
 
-- Buffer-Kapazität und Sampling-Formen
-- Sampling erst bei ausreichender Belegung
-- Q-Network-Ausgabeform `[batch_size, 4]`
-- Double-DQN-Target verwendet Online-Auswahl und Target-Auswertung
-- terminale und abgeschnittene Targets ohne Bootstrap
-- Target-Network-Update
-- Save-/Load-Roundtrip
+## Evaluation, Export und Persistenz
 
-### Training und Vergleich
+Greedy Evaluation nutzt keine Exploration oder Lernupdates. Exportiere
+Trainings-, Evaluations- und Vergleichsdaten sowie Q-Tabellen als CSV.
 
-- Episoden enden sicher
-- Abbruchcallback wird beachtet
-- identische Seeds liefern reproduzierbare tabellarische Ergebnisse
-- Vergleich verändert sichtbaren Agenten nicht
-- alle Methoden liefern dieselbe Ergebnisstruktur
-- Metriken enthalten keine Evaluation als Training
-- Konfidenzintervall bei nur einer Wiederholung hat Breite `0`
+Speicherformate:
 
-### Smoke Tests
+- tabellarisch: komprimierte NumPy-Datei oder JSON mit Metadaten
+- Vanilla DQN: Stable-Baselines3-ZIP
+- Double DQN: PyTorch-Checkpoint
 
-- alle Module importierbar
-- `CliffWalking-v1` kann erzeugt, zurückgesetzt und geschlossen werden
-- kurze Trainingsläufe aller Methoden ohne Exception
-- GUI-Konstruktion, sofern ein Display verfügbar ist
+Prüfe beim Laden Methode, Formatversion und Environment-Kompatibilität, bevor
+der aktive Zustand verändert wird.
 
-Langsame Deep-Learning-Tests werden als solche markiert. Die normale Testsuite
-muss mit kleinen Netzen und wenigen Schritten schnell ausführbar bleiben.
+## CliffWalking-spezifische Tests
 
-## README-Inhalt
+Zusätzlich zu `../workbench.md` prüfe:
 
-Die README erklärt:
+- Observation-/Positionsumrechnung und Gymnasium-Action-Reihenfolge
+- Reward, Cliff-Rücksprung, Ziel und Max-Steps-Truncation
+- Updates aller drei tabellarischen Methoden einschließlich Ties
+- SARSA verwendet seine vorbereitete `next_action`
+- Evaluation verändert keinen Lernzustand
+- Replay Buffer, Netz-Ausgabe und Target-Network-Update
+- Double-DQN-Auswahl über Online- und Auswertung über Target-Netz
+- Save-/Load-Roundtrips
+- kurzer Trainingslauf aller Methoden
+- Vergleich verändert den sichtbaren Agenten nicht
+- Q-Learning und SARSA lernen mit festen Seeds mindestens eine erfolgreiche
+  Policy
 
-- Installation im zentralen Conda-Environment
-- Startbefehl
-- CliffWalking-Regeln
-- Unterschied zwischen Cliff-Fall, Termination und Truncation
-- Q-Learning gegenüber SARSA
-- Expected SARSA
-- Vanilla DQN gegenüber Double DQN
-- Bedeutung aller wesentlichen Hyperparameter
-- Methodenvergleich und Wiederholungen
-- Interpretation der Diagramme
-- Modell- und CSV-Export
-- Testbefehle
-- bekannte Grenzen und Reproduzierbarkeit
+Deep-Learning-Tests verwenden kleine Netze und kurze Läufe; langsame Tests
+werden markiert.
 
-## Startbefehle
-
-Vom Repository-Root:
+## Start
 
 ```bash
 conda activate rl-26-08
@@ -842,28 +283,18 @@ cd Oliver/04-cliffwalking
 python cliff_walking_app.py
 ```
 
-Tests:
+Tests vom Repository-Root:
 
 ```bash
 conda run --name rl-26-08 python -m unittest discover \
   -s Oliver/04-cliffwalking/tests -v
 ```
 
-## Abnahmekriterien
+## Abnahme
 
-Die Aufgabe ist abgeschlossen, wenn:
-
-- `CliffWalking-v1` korrekt verwendet wird
-- deterministische und slippery Variante funktionieren
-- alle fünf Methoden auswählbar sind
-- Vanilla DQN tatsächlich Stable-Baselines3 verwendet
-- Double DQN fachlich korrekt separat implementiert ist
-- alle relevanten Parameter dynamisch einstellbar sind
-- Training, Animation und Vergleich die GUI nicht blockieren
-- Cliff-Fälle sichtbar und statistisch erfasst werden
-- greedy Evaluation keine Lernwerte verändert
-- Tabellen, Netzinformationen, Diagramme und Exporte funktionieren
-- Vergleich über Seeds und Wiederholungen fair ist
-- alle Tests erfolgreich sind
-- README und GUI vollständig auf Deutsch sind
-- Code-Bezeichner konsistent auf Englisch bleiben
+Fertig, wenn alle fünf Methoden fachlich korrekt funktionieren, Animation und
+Massentraining die GUI nicht blockieren, Evaluation den Lernzustand nicht
+verändert, Gymnasiums offizielles Rendering verwendet wird, der Vergleich fair und
+reproduzierbar ist und alle Tests erfolgreich laufen. README und
+Bedienungsanleitung erklären den typischen sicheren SARSA-Weg gegenüber dem
+riskanteren Q-Learning-Weg, ohne dieses Ergebnis für jeden Seed zu garantieren.
