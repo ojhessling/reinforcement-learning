@@ -8,4 +8,5 @@ dependencies:
   - numpy
   - pillow
   - requests
+  - gymnasium
   - pip
