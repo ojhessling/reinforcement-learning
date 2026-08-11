@@ -1,18 +1,11 @@
-# Allgemeiner Basis-Prompt für Reinforcement-Learning-Workbench-Projekte
+# Basis-Prompt für Reinforcement-Learning-Workbench-Projekte
 
-## Zweck
+## Geltung
 
-Diese Datei enthält verbindliche Grundregeln für alle Reinforcement-Learning-
-Workbench-Projekte im Ordner `Oliver`.
-
-Jedes Projekt besitzt zusätzlich einen projektspezifischen Prompt. Dieser
-definiert Environment, Algorithmen, Rewards, Hyperparameter und besondere
-Funktionen. Die allgemeinen Regeln aus dieser Datei müssen dort nicht
-wiederholt werden.
-
-## Verwendung
-
-Ein projektspezifischer Prompt beginnt mit:
+Diese Datei enthält die verbindlichen Grundregeln für alle
+Reinforcement-Learning-Projekte im Ordner `Oliver`. Der projektspezifische
+Prompt definiert Environment, Algorithmen, Rewards, Hyperparameter und
+Besonderheiten und beginnt mit:
 
 ```text
 Berücksichtige die verbindlichen Regeln aus ../workbench.md.
@@ -20,63 +13,30 @@ Projektname: {{project_name}}
 Environment: {{environment_name}}
 ```
 
-Platzhalter werden vor der Implementierung vollständig ersetzt. Verwende
-einheitlich `{{placeholder_name}}` und keine Mischung aus eckigen Klammern,
-Freitext und unterschiedlichen Schreibweisen.
+Bei Widersprüchen gilt folgende Priorität:
 
-## Priorität der Anforderungen
-
-Bei Widersprüchen gilt:
-
-1. ausdrückliche aktuelle Benutzeranweisung
+1. aktuelle Benutzeranweisung
 2. projektspezifischer Prompt
-3. diese allgemeine Workbench-Spezifikation
+3. diese Workbench-Spezifikation
 
-Ein projektspezifischer Prompt darf allgemeine Regeln nur ausdrücklich und mit
-Begründung überschreiben.
+Abweichungen von dieser Spezifikation müssen im projektspezifischen Prompt
+ausdrücklich begründet werden.
 
-## Rolle und Zielgruppe
+## Ziel und Sprache
 
-Erstelle die Anwendung für Developer und Reinforcement-Learning-Anfänger.
+Erstelle eine eigenständig lauffähige lokale Python-Anwendung für Developer
+und RL-Anfänger. Sie ermöglicht das Konfigurieren, Trainieren, Beobachten,
+Evaluieren und Vergleichen der vorgegebenen Verfahren. Die Anwendung läuft
+ohne Webserver, sofern der projektspezifische Prompt nichts anderes festlegt.
 
-- fachlich korrekte Algorithmen
-- verständliche, klar getrennte Architektur
-- nachvollziehbare Standardwerte
-- kurze Kommentare an fachlich wichtigen Stellen
-- keine unnötige Abstraktion
-- keine vorausgesetzten RL-Kenntnisse in GUI und README
+- GUI, Hilfen, Meldungen, README und Prompt: Deutsch
+- Code-Bezeichner: Englisch
+- Fachbegriffe dürfen verwendet werden, werden für Anfänger aber erklärt
+- fachlich wichtige Stellen erhalten kurze, hilfreiche Kommentare
 
-## Sprache und Benennung
+## Projektstruktur und Umgebung
 
-- GUI-Texte, Hilfetexte, Statusmeldungen und Fehlermeldungen: Deutsch
-- README und projektspezifischer Prompt: Deutsch
-- Datei-, Modul-, Klassen-, Methoden- und Variablennamen: Englisch
-- etablierte Fachbegriffe wie `Reward`, `Policy`, `Replay Buffer` oder
-  `Q-Value` dürfen verwendet werden, müssen für Anfänger aber erklärt werden
-- Schreibweisen innerhalb eines Projekts bleiben konsistent
-
-## Ziel
-
-Erstelle eine eigenständig lauffähige lokale Python-Anwendung, mit der sich
-Reinforcement-Learning-Verfahren:
-
-- konfigurieren
-- trainieren
-- schrittweise beobachten
-- ohne Lernupdates evaluieren
-- vergleichen
-- anhand geeigneter Metriken verstehen
-
-lassen.
-
-Die Anwendung läuft ohne Webserver. Abweichungen, beispielsweise eine bewusst
-gewählte Weboberfläche, müssen im projektspezifischen Prompt stehen.
-
-## Projektordner und Dateien
-
-Ausgabeordner ist der Ordner des projektspezifischen Prompts.
-
-Mindeststruktur:
+Mindeststruktur im Ordner des projektspezifischen Prompts:
 
 ```text
 {{project_name}}_app.py
@@ -88,511 +48,308 @@ tests/
     test_{{project_name}}_logic.py
 ```
 
-Optional bei größerem Umfang:
+- Die App-Datei enthält nur den Entry Point.
+- Logikmodule importieren kein Tkinter; die GUI enthält keine Lernformeln.
+- Zusätzliche Module werden nur bei erkennbarem Nutzen angelegt.
+- Laufzeitergebnisse und lokale virtuelle Umgebungen werden nicht committed.
+- Alle Projekte verwenden `Oliver/environment.yml`.
+- Direkte Abhängigkeiten stehen zusätzlich in `requirements.txt`; neue Pakete
+  werden nur bei Bedarf aufgenommen und auf Konflikte geprüft.
+- Neuronale Netze werden in diesem Kurs ausschließlich mit PyTorch umgesetzt.
+  TensorFlow und Keras werden nicht verwendet.
 
-```text
-{{project_name}}_agents.py
-{{project_name}}_models.py
-{{project_name}}_comparison.py
-{{project_name}}_export.py
-tests/test_{{project_name}}_integration.py
-```
-
-Regeln:
-
-- `{{project_name}}_app.py` enthält ausschließlich den Entry Point
-- `{{project_name}}_logic.py` und weitere Logikmodule importieren kein Tkinter
-- `{{project_name}}_gui.py` enthält keine Lernformeln
-- Tests liegen einheitlich unter `tests/`, nicht unter `test/`
-- Laufzeitergebnisse liegen nur in ignorierten Ordnern wie `exports/`,
-  `plots/` oder `models/`
-- keine projektspezifische virtuelle Umgebung im Projektordner
-
-## Python- und Conda-Umgebung
-
-Alle Projekte von Oliver verwenden das zentrale Conda-Environment aus:
-
-```text
-Oliver/environment.yml
-```
-
-Bei neuen Abhängigkeiten:
-
-- direkte Projektabhängigkeiten in `requirements.txt` dokumentieren
-- zentrale `../environment.yml` ergänzen
-- keine unnötigen oder ungenutzten Pakete aufnehmen
-- Versionskonflikte mit bestehenden Projekten prüfen
-
-## Architektur und Verantwortlichkeiten
+## Architektur
 
 ### Environment
 
-Das Environment verwaltet ausschließlich:
-
-- Observation- und Action Space
-- Zustandsübergänge
-- Rewards
-- `terminated` und `truncated`
-- Reset und Seed
-- gegebenenfalls Rendering und Environment-spezifische Statistiken
-
+Das Environment verwaltet Observation- und Action-Space, Zustandsübergänge,
+Rewards, Reset, Seed, `terminated`, `truncated` und gegebenenfalls Rendering.
 Es enthält keine GUI- oder Lernlogik.
 
-### Agent oder Policy
+### Agenten und Runner
 
-Jeder Algorithmus besitzt eine eigene Klasse mit einer möglichst gemeinsamen
-Schnittstelle:
+Jeder Algorithmus besitzt eine eigene Klasse mit möglichst einheitlicher
+Schnittstelle für Reset, Action-Auswahl, Lernen, Episodenende, Metriken sowie
+gegebenenfalls Speichern und Laden.
 
-```text
-reset(seed=None) -> None
-select_action(observation, training=True) -> action
-observe(transition) -> None
-end_episode() -> None
-get_metrics() -> Dict[str, object]
-save(path) -> None
-load(path) -> None
-```
-
-Nicht benötigte Methoden dürfen als klar dokumentierte No-Op implementiert
-werden. Unterschiedliche Algorithmen dürfen intern verschieden arbeiten, müssen
-aber nach außen vergleichbare Ergebnisobjekte liefern.
-
-### Runner
-
-Training, Evaluation und Vergleich werden nicht in Button-Callbacks
-implementiert. Verwende getrennte Runner:
-
-- `TrainingRunner`
-- `EvaluationRunner`
-- `ComparisonRunner`
-
-Sie kapseln Schleifen, Abbruchprüfungen, Fortschritt und Ergebnisaggregation.
-
-### Ergebnisobjekte
-
-Verwende Dataclasses oder eindeutig typisierte Strukturen, beispielsweise:
-
-```text
-Transition
-EpisodeResult
-TrainingPoint
-EvaluationResult
-ComparisonResult
-```
-
-Vermeide uneindeutige Tupel mit positionsabhängiger Bedeutung.
+Training, Evaluation und Vergleich liegen nicht in Button-Callbacks, sondern
+in getrennten Runnern oder gleichwertig klar getrennten Komponenten. Ergebnisse
+werden durch Dataclasses oder eindeutig typisierte Strukturen statt
+positionsabhängiger Tupel dargestellt.
 
 ### GUI
 
-Die GUI ist ausschließlich verantwortlich für:
-
-- Eingaben und Validierungsfeedback
-- Starten und Stoppen von Runnern
-- Visualisierung
-- Status und Fortschritt
-- Dialoge
-- Datei-Auswahl für Exporte und Modelle
-
-Reward-Regeln, Updates und Action-Auswahl gehören nicht in die GUI.
+Die GUI ist für Eingaben, Validierungsfeedback, Runner-Steuerung,
+Visualisierung, Status und Dialoge verantwortlich. Reward-Regeln, Lernupdates
+und Action-Auswahl gehören nicht in die GUI.
 
 ## Fachliche RL-Regeln
 
-### Training und Evaluation trennen
+### Training und Evaluation
 
-Evaluation:
+Evaluation verwendet keine Exploration und keine Lernupdates. Sie verändert
+weder Lernzustand noch Trainingsstatistiken und verwendet eigene Ergebnisse
+sowie einen definierten Startzustand.
 
-- verwendet keine Exploration, sofern nicht ausdrücklich anders definiert
-- führt keine Lernupdates aus
-- verändert weder Tabellen, Netze, Replay Buffer noch Trainingsstatistiken
-- verwendet eigene Ergebnislisten
-- startet in einem definierten Environment-Zustand
+### Episodenende
 
-### Episode-Ende
-
-Unterscheide überall:
+Unterscheide durchgängig:
 
 - `terminated`: fachlich terminaler Zustand
-- `truncated`: externes Limit, beispielsweise `max_steps`
+- `truncated`: externes Limit
 - `done = terminated or truncated`
 
-Dokumentiere für jeden Algorithmus ausdrücklich, ob bei Truncation gebootstrapt
-wird. Die Entscheidung muss in Implementierung, Tests und README konsistent
-sein.
+Ob bei Truncation gebootstrapt wird, muss je Algorithmus in Implementierung,
+Tests und README konsistent festgelegt sein.
 
-### Zufälliges Tie-Breaking
+### Tie-Breaking und unbesuchte Zustände
 
-Bei mehreren gleich guten Actions:
-
-- keine systematische Bevorzugung des kleinsten Action-Index
-- reproduzierbare zufällige Auswahl
-- numerische Toleranz bei Fließkommawerten
-- Policy-Ansicht zeigt alle gleichwertigen Actions
-
-### Unbesuchte Zustände
-
-Unbesuchte Werte werden in Tabellen und Visualisierungen als `—` oder `?`
-dargestellt. Ein Initialwert `0` darf nicht fälschlich wie ein gelernter Wert
-wirken.
+Gleich gute Actions werden mit numerischer Toleranz reproduzierbar zufällig
+ausgewählt. Die Policy-Ansicht zeigt alle gleichwertigen Actions. Unbesuchte
+Werte erscheinen als `—` oder `?`, nicht wie gelernte Nullwerte.
 
 ### Reproduzierbarkeit
 
-Seed, sofern verwendet:
-
-- Python `random`
-- NumPy
-- Environment und Action Space
-- Frameworks wie PyTorch
-- getrennte Zufallsgeneratoren für unabhängige Aufgaben, beispielsweise
-  Exploration, Tie-Breaking und Vergleich
-
-Ein Reset startet Zufallsgeneratoren nur dann neu, wenn dies ausdrücklich über
-einen Seed angefordert wird.
+Ein angegebener Seed wird für Python, NumPy, Environment, Action-Space und
+verwendete Frameworks gesetzt. Unabhängige Aufgaben erhalten getrennte
+Zufallsgeneratoren. Ein Reset setzt Generatoren nur bei ausdrücklich
+angegebenem Seed zurück.
 
 ## Parameter
 
-### Sichtbarkeit
-
-- allgemeine Parameter immer anzeigen
-- algorithmusspezifische Parameter nur für relevante Methoden anzeigen
-- irrelevante Felder ausblenden oder deaktivieren
-- direkt bei komplexen Parametern kurze Erklärungen anzeigen
-- sinnvolle, im projektspezifischen Prompt begründete Standardwerte verwenden
-
-### Übernahme
-
-- geänderte Werte werden beim Start einer Aktion automatisch validiert und
-  übernommen
-- ein zusätzlicher Anwenden-Button ist optional
-- Übernahme erfolgt atomar: entweder alle Eingaben sind gültig oder das aktive
-  Experiment bleibt unverändert
-- strukturelle Änderungen setzen betroffene Lernzustände bewusst zurück
-- Änderungen ohne Einfluss auf gelernte Werte sollen den Lernzustand erhalten
-- ein notwendiger Reset wird vor der Ausführung verständlich angezeigt
-
-### Validierung
-
-Prüfe mindestens:
-
-- Wertebereiche
-- positive Ganzzahlen
-- Beziehungen zwischen Parametern
-- erreichbare Ziele, sofern relevant
-- Buffer- und Batch-Größen
-- Netzwerkarchitekturen
-- optionale Seeds
-- vorhandene Pfade und kompatible Modelldateien
-
-Fehlermeldungen nennen Feld, ungültigen Wert und gültigen Bereich.
-
-## GUI-Design
-
-Die Oberfläche wirkt wie ein übersichtliches Lernlabor.
-
-### Layout
-
-- Kopfbereich mit Titel, Untertitel und Status
-- linkes oder oberes Bedienpanel
-- großer Visualisierungsbereich
-- Summary mit wichtigsten Metriken
-- Tabs für Diagramme und Vergleiche
-- scrollbareres Bedienpanel bei kleinen Bildschirmen
-- lesbar auf typischen Laptop-Auflösungen
-- sinnvolle Mindestgröße
-
-### Layout-Stabilität
-
-- wechselnde Parameter dürfen das Fenster nicht unkontrolliert vergrößern
-- Diagramme und Environment teilen den verfügbaren Platz über Gewichte
-- lange Texte umbrechen
-- große Tabellen besitzen horizontale und vertikale Scrollbars
-- Zellen und Beschriftungen überlappen nicht
-- Widgets springen während Updates nicht zwischen Positionen
-
-### Zustände der Controls
-
-- während inkompatibler Aktionen Buttons gezielt deaktivieren
-- `Stoppen` nur während laufender Arbeit aktivieren
-- nach Erfolg, Abbruch oder Exception alle Controls zuverlässig wiederherstellen
-- Status unterscheidet `Bereit`, `Läuft`, `Gestoppt`, `Abgeschlossen` und
-  `Fehler`
-- deaktivierte Oberfläche darf nicht wie ein Programmabsturz wirken
-
-### Bedienungsanleitung
-
-Jede App besitzt einen Button `Bedienungsanleitung`. Der modale Dialog erklärt:
-
-- empfohlenen Ablauf
-- Environment und Rewards
-- Methoden
-- Training gegenüber Evaluation
-- Parameter
-- Diagramme und Tabellen
-- typische Gründe für ausbleibenden Lernerfolg
-
-## Asynchronität und Responsivität
-
-Die GUI darf während Training, Evaluation, Vergleich, Export oder Animation
-nicht einfrieren.
-
-- keine langen Schleifen im Tkinter-Thread
-- keine `sleep()`-Aufrufe im Tkinter-Thread
-- kleine Arbeitspakete mit `after()` oder Worker-Thread plus Queue
-- Worker greifen niemals direkt auf Tkinter-Widgets zu
-- GUI liest Queues über `after()` in einem angemessenen Intervall, üblicherweise
-  `50–200 ms`
-- `10 ms` nur, wenn Messungen zeigen, dass es notwendig und effizient ist
-- Plot-Updates begrenzen, beispielsweise auf `5–10` Aktualisierungen pro
-  Sekunde
-- Massentraining ohne Einzelbildanimation
-- sichtbare Episoden und Evaluationen besitzen eine Option
-  `Animation anzeigen`
-- das Animationsintervall ist in Millisekunden einstellbar; Standardwert
-  `10 ms`, sofern der projektspezifische Prompt nichts anderes festlegt
-- bei deaktivierter Animation ohne Einzelbilder ausführen und nur das
-  Endergebnis darstellen
-- das Intervall steuert die Zeit zwischen zwei sichtbaren Agentenschritten und
-  nicht die Trainingsgeschwindigkeit des Massentrainings
-- Abbruch regelmäßig an sicheren Grenzen prüfen
-- beim Schließen Worker beenden und Ressourcen freigeben
-
-Fortschrittsmeldungen enthalten nach Möglichkeit:
-
-```text
-Methode
-Episode oder Trainingsschritt
-Wiederholung
-Gesamtfortschritt
-geschätzter Arbeitsumfang
-```
-
-## Visualisierung und Metriken
-
-Zeige nur Metriken, die für das konkrete Environment und den Algorithmus
-sinnvoll sind.
-
-Typische Metriken:
-
-- Episode-Return
-- gleitender Durchschnitt
-- Erfolgsrate
-- Episodenlänge
-- Exploration beziehungsweise Epsilon
-- Environment-Schritte
-- Loss bei neuronalen Netzen
-- Environment-spezifische Fehler oder Risiken
-
-Regeln:
-
-- Rohwerte dünn und transparent
-- geglättete Werte deutlich hervorgehoben
-- Achsen, Einheiten und Methode beschriften
-- Legende bei mehreren Methoden
-- keine künstlichen Nullwerte für noch nicht vorhandene Messungen
-- Training und Evaluation optisch unterscheiden
-
-## Methodenvergleich
-
-Ein Vergleich verändert das sichtbare Experiment nicht.
-
-### Fairness
-
-- identische Environment-Konfiguration
-- identische Trainingsbudgets
-- gleiche, reproduzierbar abgeleitete Seeds
-- neuer Lernzustand pro Methode und Wiederholung
-- Evaluation ohne Exploration und ohne Lernupdates
-- gleiche Evaluationsmetriken
-- Laufzeit zusätzlich, aber nicht als alleinige Qualitätsmetrik
-
-Bei sehr unterschiedlichen Algorithmen wird ein gemeinsames Budget verwendet,
-bevorzugt Environment-Schritte statt nur Episoden.
-
-### Wiederholungen
-
-Zeige den Gesamtumfang vor dem Start:
-
-```text
-Anzahl Methoden × Trainingsbudget × Wiederholungen
-```
-
-Aggregiere:
-
-- Mittelwert
-- Standardabweichung oder 95-%-Konfidenzintervall
-- Erfolgsrate
-- relevante Environment-Metriken
-
-Bei einer Wiederholung hat das Konfidenzintervall die Breite `0` und wird nicht
-irreführend dargestellt.
-
-### Abbruch
-
-- bereits abgeschlossene Ergebnisse bleiben erhalten
-- unvollständige Ergebnisse werden markiert
-- sichtbares Experiment bleibt unverändert
-
-## Tabellen, Export und Modelle
-
-### Tabellen
-
-- beim Öffnen aktueller Lernstand
-- vollständige Zustands- oder Parameterliste
-- besuchte und unbesuchte Zustände unterscheiden
-- modaler, scrollbar bedienbarer Dialog
-- sinnvolle Hervorhebung von Start, Ziel, terminalen und ungültigen Zuständen
-
-### CSV-Export
-
-- UTF-8
-- Komma als Trennzeichen
-- stabile Spaltenreihenfolge
-- Fließkommazahlen standardmäßig mit sechs Nachkommastellen
-- eindeutiger Dateiname
-- keine Änderung des Experiments
-
-### Modelle
-
-Wenn Speichern und Laden unterstützt werden:
-
-- Lernzustand plus notwendige Metadaten speichern
-- Format-Version aufnehmen
-- Methode und Environment-Kompatibilität beim Laden prüfen
-- inkompatible Datei verändert den aktiven Zustand nicht
-- Dateifehler verständlich melden
-
-## Fehlerbehandlung und Lebenszyklus
-
-- erwartbare Eingabefehler als deutsche Dialogmeldung
-- technische Exceptions im Runner auffangen und an GUI melden
-- Busy-Zustand auch nach Fehlern zuverlässig beenden
-- keine leeren `except`-Blöcke
-- Ressourcen über `close()` freigeben
-- temporäre Dateien nur in geeigneten temporären Ordnern
-- bestehende Dateien nicht ohne Nachfrage überschreiben
-
-## Performance
-
-Optimiere erst nach einer korrekten, getesteten Referenzimplementierung.
-
-Vorgehen:
-
-1. Korrektheit mit kleinen deterministischen Tests sichern.
-2. Repräsentativen Trainingslauf messen.
-3. tatsächlichen Engpass bestimmen.
-4. gezielte Optimierung implementieren.
-5. Tests erneut ausführen.
-6. Laufzeit und Lernergebnis mit derselben Konfiguration vergleichen.
-
-Keine pauschale Forderung nach mehreren Optimierungsrunden ohne Messung.
-Lernerfolg darf nicht durch eine fachlich falsche Abkürzung erkauft werden.
-
-## Tests
-
-Tests werden nicht beim normalen App-Start ausgeführt.
-
-### Unit-Tests
-
-Prüfe mindestens:
-
-- Environment-Übergänge und Rewards
-- Termination und Truncation
-- Updateformel jedes Algorithmus
-- Action-Auswahl und Tie-Breaking
-- Parametergrenzen
-- Reset-Verhalten
-- Ergebnisobjekte
-- Exportdaten ohne Dateidialog
-
-### Simulationstests
-
-Für jeden Algorithmus:
-
-- kleines, schnelles und möglichst deterministisches Szenario
-- Nachweis, dass ein definierter Lernfortschritt möglich ist
-- feste Seeds
-- robuste Schwelle statt exakter zufälliger Trajektorie
-- sinnvolles Zeitlimit
-
-Ein Simulationstest darf nicht nur prüfen, dass kein Fehler auftritt. Er prüft
-eine fachliche Eigenschaft, beispielsweise verbesserter Return, gelernte Action
-oder steigende Erfolgsrate.
+- allgemeine Parameter sind immer sichtbar
+- algorithmusspezifische Parameter erscheinen nur bei passenden Methoden
+- Parameter werden fachlich gruppiert und so kompakt angeordnet, dass sie auf
+  typischen Laptop-Auflösungen möglichst ohne Scrollen auf einen Blick sichtbar
+  sind; lange, ungegliederte Ein-Spalten-Listen sind zu vermeiden
+- GUI-Beschriftungen kombinieren den verständlichen deutschen Namen mit dem
+  etablierten mathematischen Symbol, beispielsweise `Lernrate α`,
+  `Diskontfaktor γ` oder `Exploration ε`; Symbole werden nicht künstlich
+  erfunden, wenn es keine gebräuchliche Notation gibt
+- komplexe Parameter erhalten kurze Erklärungen
+- Eingaben werden vor einer Aktion vollständig validiert und atomar übernommen
+- notwendige Resets des Lernzustands werden verständlich angezeigt
+- Validierung berücksichtigt Wertebereiche, Abhängigkeiten sowie kompatible
+  Netzwerk-, Buffer-, Batch- und Modelldatei-Konfigurationen
+- Fehlermeldungen nennen Feld, ungültigen Wert und gültigen Bereich
 
 ### Neuronale Netze
 
-Nur wenn das Projekt neuronale Netze verwendet:
+Bei neuronalen Netzen müssen alle verwendeten Hyperparameter in der UI
+änderbar sein. Dazu gehören je nach Verfahren insbesondere:
 
-- Ein- und Ausgabeformen
-- terminale Targets
-- Loss und Optimizer-Schritt
-- Target-Network-Update
-- Replay-Buffer
-- Save-/Load-Roundtrip
-- kurzer Trainingstest
+- Anzahl und Größe der Hidden Layers
+- Aktivierungsfunktion
+- Lernrate und Optimizer-Parameter
+- Batch-Größe
+- Initialisierung, Normalisierung, Regularisierung und Gradient Clipping
+- Target-Network-Update und Anzahl der Gradientenschritte
 
-Tabellarische Projekte benötigen keine künstlichen Netzwerkklassen oder
-Netzwerktests.
+Standardwerte werden aus einschlägiger Fachliteratur, den
+algorithmusspezifischen Voreinstellungen von Stable-Baselines3 oder einem
+passenden environmentspezifischen Profil des RL Baselines3 Zoo abgeleitet.
+Environment-spezifische Profile haben Vorrang vor allgemeinen Defaults. Prompt
+und README nennen Quelle, Algorithmus und Version beziehungsweise Profilstand.
+Abweichungen werden fachlich begründet, nicht unterstützte Optionen in
+der README dokumentiert.
 
-### Integrations- und Smoke-Tests
+## GUI-Design
 
-- Module importierbar
-- App-Komponenten konstruierbar
-- kurzer Trainings- und Evaluationslauf
-- Vergleich mit minimaler Konfiguration
-- GUI-Smoke-Test nur, wenn ein Display verfügbar ist
+- das Projekt verwendet ein konsistentes helles oder dunkles Farbschema; bei
+  Dark Mode besitzen Texte, Eingabewerte, deaktivierte Controls, Achsen,
+  Legenden und Statusmeldungen einen gut lesbaren Kontrast
+- Kopfbereich mit Titel, Untertitel und Status
+- Hauptbereich mit verschiebbarem horizontalem Splitter
+- obere und untere Hälfte sind anfangs gleich hoch und frei skalierbar
+- im oberen Bereich stehen das kompakt gruppierte Bedienpanel links und die
+  Environment-Visualisierung rechts nebeneinander
+- verwendet das Bedienpanel ein Drei-Spalten-Raster, enthalten die ersten
+  beiden Spalten ausschließlich fachlich gruppierte Parameter; die dritte
+  Spalte ist den Steuerungsbuttons vorbehalten
+- Steuerungsbuttons stehen in dieser dritten Spalte untereinander, nutzen die
+  volle Spaltenbreite und besitzen ausreichend große, einheitliche
+  Klickflächen
+- der untere Bereich nutzt die gesamte Fensterbreite für Diagramme, Vergleiche
+  und Summary
+- Diagramm beziehungsweise Vergleichsgraph und Summary sind im unteren Bereich
+  gleichzeitig nebeneinander sichtbar; die Summary liegt nicht in einem
+  separaten Tab und der Graph erhält den deutlich größeren Platzanteil
+- Bedienpanel und Visualisierung erhalten feste beziehungsweise gewichtete
+  Platzanteile, sodass keines der beiden durch die Wunschgröße des anderen
+  verdrängt oder auf 1 × 1 Pixel reduziert wird
+- Tabs für sinnvolle Diagramme und Vergleiche
+- alle wesentlichen Parameter und Steuerungsbuttons sind bei der
+  Mindestfenstergröße gleichzeitig sichtbar; Scrollen ist nur ein Fallback für
+  kleinere Fenster, nicht das Standardlayout
+- stabile, lesbare Darstellung auf typischen Laptop-Auflösungen
+- große Tabellen mit horizontaler und vertikaler Scrollbar
 
-### Prüfablauf pro Algorithmus
+Fenstergröße und initiale Splitterposition werden nicht blind festgelegt,
+sondern aus Bildschirmgröße, Mindestgröße der sichtbaren Controls und einem
+Mindestplatz für Visualisierung beziehungsweise Diagramm abgeleitet. Beim
+Programmstart darf kein wesentliches Widget abgeschnitten sein. Das Fenster
+darf den nutzbaren Bildschirmbereich nicht unnötig überschreiten.
 
-1. Updateformel fachlich prüfen.
-2. Termination und Truncation prüfen.
-3. relevanten Parameterumfang der GUI prüfen.
-4. kurzen Simulationstest ausführen.
-5. Lernergebnis und Laufzeit dokumentieren.
-6. nur bei nachgewiesenem Bedarf optimieren.
-7. Regressionstests vollständig erneut ausführen.
+Das Layout wird mit einem realen GUI-Smoke-Test geprüft. Dabei müssen
+Visualisierung, alle wesentlichen Buttons und der Diagrammbereich tatsächlich
+gemappt sein und innerhalb des sichtbaren Fensters liegen. Dies gilt auch für
+alle Eingabefelder, Auswahlfelder, Checkboxen und Fortschrittsanzeigen. Der Test
+läuft mit der vorgesehenen Startfenstergröße und initialen Splitterposition.
+Eine reine Konstruktion der Widgets reicht nicht als Layout-Test.
+
+Controls spiegeln den Zustand `Bereit`, `Läuft`, `Gestoppt`, `Abgeschlossen`
+oder `Fehler` wider. Inkompatible Aktionen werden gezielt deaktiviert und nach
+Erfolg, Abbruch oder Fehler wieder freigegeben.
+
+Jede App besitzt eine `Bedienungsanleitung`. Sie erklärt kurz den empfohlenen
+Ablauf, Environment und Rewards, Methoden, Training gegenüber Evaluation,
+Parameter, Ansichten und typische Ursachen ausbleibenden Lernerfolgs.
+
+## Responsivität
+
+Die GUI bleibt bei Training, Evaluation, Vergleich und Animation bedienbar.
+Lange Arbeit läuft in kleinen `after()`-Schritten oder in Worker-Threads mit
+Queue; Worker greifen nie direkt auf Tkinter-Widgets zu. Plot- und
+Statusaktualisierungen werden auf eine sinnvolle Frequenz begrenzt.
+
+Massentraining läuft ohne Einzelbildanimation. Sichtbare Episoden besitzen eine
+abschaltbare Animation mit einstellbarem Intervall. Abbruch wird regelmäßig
+geprüft; beim Schließen werden Worker und Ressourcen sauber beendet.
+
+Auf macOS dürfen Tkinter und ein SDL-/Pygame-Renderer nicht im selben Prozess
+initialisiert werden, wenn dies zu nativen Abstürzen führen kann. In diesem Fall
+läuft ausschließlich das Rendering in einem isolierten, unsichtbaren Prozess
+mit headless SDL-Treiber; die GUI erhält nur RGB-Frames. Der Hilfsprozess erzeugt
+keinen zusätzlichen Dock-Eintrag und wird beim Schließen beendet.
+
+## Visualisierung und Vergleich
+
+Zeige nur für Environment und Algorithmus sinnvolle Metriken, beispielsweise
+Episode-Return, gleitenden Durchschnitt, Erfolgsrate, Episodenlänge,
+Exploration, Environment-Schritte und bei neuronalen Netzen den Loss.
+
+- Achsen, Einheiten und Methoden sind beschriftet.
+- Wenn neben dem Plot ausreichend Breite vorhanden ist, liegt die Legende in
+  einem reservierten Bereich außerhalb der Achsen. Sie darf weder Datenlinien
+  verdecken noch am Rand der Figure abgeschnitten werden.
+- Rohwerte und geglättete Werte sind unterscheidbar.
+- Training und Evaluation werden optisch getrennt.
+- Deterministische Evaluationsergebnisse werden in der Summary ausgewiesen und
+  müssen nicht zusätzlich im Trainingsgraphen dargestellt werden.
+- Längere Trainings- und Vergleichsläufe werden in einem sichtbaren,
+  konfigurierbaren Schrittintervall automatisch in einer separaten headless
+  Environment deterministisch evaluiert. Dies erzeugt keine Animation und
+  verändert weder Modell noch Replay Buffer. Der Graph und die Summary-Tabelle
+  werden mit dem Ergebnis live aktualisiert.
+- Der beste deterministische Evaluationswert eines Einzeltrainings wird gemerkt.
+  Bei jeder Verbesserung werden Modell und zugehöriger Replay Buffer konsistent als
+  gemeinsamer Checkpoint gesichert, in der Summary ausgewiesen und über einen
+  klar beschrifteten Button wiederherstellbar gemacht. Wiederhergestellt wird der
+  vollständige Lernzustand, nicht nur das neuronale Netz.
+- Trainings- und Vergleichskurven verwenden einheitlich Episoden auf der
+  X-Achse. Das Trainingsbudget und die tatsächlich ausgeführten
+  Environment-Schritte bleiben separat in Status und Summary sichtbar.
+- Fehlende Daten werden nicht durch künstliche Nullwerte ersetzt.
+- Bei episodenbasierten Kurven entstehen Punkte nur für vollständig
+  abgeschlossene Episoden. Endet ein Trainingsbudget innerhalb einer Episode,
+  darf der letzte Kurvenpunkt deshalb vor dem tatsächlich ausgeführten
+  Schrittbudget liegen. GUI und Summary zeigen ausgeführte Schritte,
+  angefordertes Budget und diese Bedeutung getrennt und verständlich an.
+
+Enthält ein Projekt mehrere Algorithmen, ist ein gemeinsamer Vergleichsgraph
+verpflichtend. Er stellt alle Algorithmen mit derselben aussagekräftigen
+X-Achse und derselben Metrik gegenüber. Farben,
+Linienstile und Legende unterscheiden die Methoden eindeutig. Bei mehreren
+Wiederholungen zeigt der Graph den Mittelwert und zusätzlich
+Standardabweichung oder 95-%-Konfidenzintervall als Unsicherheitsband. Bei genau
+einem Algorithmus entfällt der Algorithmenvergleich; unterschiedliche
+Konfigurationen dürfen optional verglichen werden.
+
+Die GUI erlaubt auszuwählen, welche der verfügbaren Algorithmen in den
+Vergleich eingehen. Der Vergleichsgraph erscheint mit dem ersten verfügbaren
+Ergebnis und wird während aller Läufe in einem sinnvollen Intervall
+fortgeschrieben. Er darf nicht erst nach Abschluss des gesamten Vergleichs
+angezeigt oder aktualisiert werden. Ausgewählte Algorithmen starten parallel;
+die Fortschrittsanzeige aggregiert ihre tatsächlich ausgeführten Schritte.
+Ein erneut gestarteter, kompatibel konfigurierter Vergleich setzt die
+Vergleichsmodelle nicht zurück, sondern setzt ihr Training fort und hängt neue
+Messpunkte an die vorhandenen Kurven an. Rohwerte werden dezent dargestellt;
+pro Algorithmus hebt eine kräftige Linie den gleitenden Durchschnitt der
+letzten 20 Episodenergebnisse hervor.
+Dasselbe gilt für den normalen
+Trainingsgraphen: aktuelle Episodenergebnisse werden während des Trainings
+sichtbar. Parallel dazu wird auch die Summary live aktualisiert; sie zeigt für
+Training und Vergleich konsistent Episoden, ausgeführte Environment-Schritte,
+aktuelle beziehungsweise gemittelte Rewards und Erfolgsrate.
+
+Lange Rohkurven werden nur für die Darstellung auf eine feste, angemessene
+Punktzahl verdichtet; die Messdaten selbst bleiben vollständig erhalten. Eine
+Min-/Max-Verdichtung ist einfachem Auslassen vorzuziehen, damit lokale Spitzen
+und Einbrüche sichtbar bleiben. Plot-Updates werden zeitlich gedrosselt.
+
+Vergleiche verändern das sichtbare Experiment nicht. Methoden erhalten
+identische Environment-Konfigurationen, reproduzierbar abgeleitete Seeds und
+ein vergleichbares Trainingsbudget, bevorzugt in Environment-Schritten. Jede
+Methode und Wiederholung startet mit neuem Lernzustand; die Evaluation erfolgt
+ohne Exploration und Lernupdates.
+
+Vor dem Start wird der Gesamtumfang angezeigt. Mehrere Wiederholungen werden
+mit Mittelwert und Standardabweichung oder 95-%-Konfidenzintervall aggregiert.
+Bei Abbruch bleiben vollständige Ergebnisse erhalten und unvollständige werden
+gekennzeichnet.
+
+## Tabellen und Modelle
+
+Tabellen zeigen den aktuellen, vollständigen Lernstand, unterscheiden besuchte
+und unbesuchte Zustände und sind scrollbar.
+
+Wenn Modelle gespeichert und geladen werden, enthalten sie Lernzustand,
+Format-Version und notwendige Metadaten. Methode und Environment werden beim
+Laden auf Kompatibilität geprüft. Fehlerhafte oder inkompatible Dateien dürfen
+den aktiven Zustand nicht verändern.
+
+## Fehlerbehandlung und Performance
+
+- erwartbare Eingabefehler erscheinen als deutsche Dialogmeldung
+- technische Fehler werden aufgefangen und verständlich gemeldet
+- Busy-Zustände werden auch nach Fehlern beendet
+- Ressourcen werden sauber freigegeben
+- bestehende Dateien werden nicht ohne Nachfrage überschrieben
+
+Zuerst entsteht eine korrekte, getestete Referenzimplementierung. Optimiert wird
+nur nach Messung eines repräsentativen Laufs; Tests und Lernergebnis werden
+danach erneut geprüft.
+
+## Tests und Abnahme
+
+Tests laufen nicht beim normalen App-Start. Sie prüfen mindestens:
+
+- Environment-Übergänge, Rewards, Termination und Truncation
+- Updateformeln, Action-Auswahl und Tie-Breaking jedes Algorithmus
+- Parametergrenzen, Reset-Verhalten und Ergebnisobjekte
+- Trennung von Training und Evaluation
+- reproduzierbaren Lernfortschritt in einem kurzen Simulationsszenario
+- kurzen Trainings-, Evaluations- und Vergleichslauf
+- Import und Konstruktion der App-Komponenten
+
+Bei neuronalen Netzen werden zusätzlich Ein- und Ausgabeformen, Targets, Loss,
+Optimizer-Schritt, Target-Network-Update, Replay-Buffer sowie gegebenenfalls der
+Save-/Load-Roundtrip getestet. Ein GUI-Smoke-Test wird nur mit verfügbarem
+Display ausgeführt.
+
+Ein Projekt ist abgeschlossen, wenn alle projektspezifischen Verfahren korrekt
+implementiert sind, die GUI responsiv bleibt, Vergleiche fair und isoliert
+ablaufen, fachlicher Lernfortschritt getestet ist und alle Tests erfolgreich
+sind.
 
 ## README
 
-Jedes Projekt besitzt eine README mit:
+Die README enthält:
 
-- Ziel der Anwendung
-- Installation und Environment-Aktualisierung
-- Startbefehl
+- Ziel, Installation und Startbefehl
 - Environment, Actions und Rewards
 - Methoden und wesentliche Formeln in verständlicher Sprache
-- Parameter und Standardwerte
-- empfohlener Bedienablauf
-- Interpretation von Metriken und Diagrammen
-- Vergleichslogik und Wiederholungen
-- Exporte und Modelle
-- Testbefehl
-- bekannte Grenzen
-
-## Arbeitsweise bei der Implementierung
-
-1. Projektspezifischen Prompt vollständig lesen.
-2. Widersprüche und fehlende Entscheidungen benennen.
-3. Environment und Ergebnisobjekte implementieren.
-4. Algorithmen einzeln implementieren und testen.
-5. Training, Evaluation und Vergleich ergänzen.
-6. GUI mit dynamischen Parametern anbinden.
-7. Exporte und Dokumentation ergänzen.
-8. vollständige Testsuite ausführen.
-9. repräsentativen Smoke-Test durchführen.
-10. Änderungen und bekannte Grenzen knapp dokumentieren.
-
-## Abnahmekriterien
-
-Ein Workbench-Projekt ist abgeschlossen, wenn:
-
-- alle projektspezifischen Methoden korrekt implementiert sind
-- Training und Evaluation getrennt sind
-- GUI während langer Aktionen bedienbar bleibt
-- Abbruch und Fehler Controls zuverlässig wieder aktivieren
-- nur relevante Parameter sichtbar sind
-- Eingaben automatisch und atomar übernommen werden
-- Vergleiche isoliert, reproduzierbar und fair sind
-- unbesuchte Werte klar erkennbar sind
-- Tests fachliche Eigenschaften und Lernfortschritt prüfen
-- alle Tests erfolgreich sind
-- README und Bedienungsanleitung vollständig sind
-- keine generierten Dateien oder lokalen Umgebungen committed werden
+- Parameter, Standardwerte und Quellen
+- Bedienablauf und Interpretation der Ansichten
+- Vergleichslogik sowie Speichern und Laden, sofern vorhanden
+- Testbefehl und bekannte Grenzen

@@ -12,3 +12,4 @@ dependencies:
   - pip
   - pip:
       - pygame>=2.5
+      - stable-baselines3==2.9.0
