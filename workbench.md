@@ -122,10 +122,11 @@ angegebenem Seed zurück.
 - Parameter werden fachlich gruppiert und so kompakt angeordnet, dass sie auf
   typischen Laptop-Auflösungen möglichst ohne Scrollen auf einen Blick sichtbar
   sind; lange, ungegliederte Ein-Spalten-Listen sind zu vermeiden
-- GUI-Beschriftungen kombinieren den verständlichen deutschen Namen mit dem
-  etablierten mathematischen Symbol, beispielsweise `Lernrate α`,
-  `Diskontfaktor γ` oder `Exploration ε`; Symbole werden nicht künstlich
-  erfunden, wenn es keine gebräuchliche Notation gibt
+- Parameterbezeichnungen verwenden die üblichen englischen Fachnamen und,
+  sofern vorhanden, zusätzlich das etablierte mathematische Symbol,
+  beispielsweise `Learning Rate α`, `Discount Factor γ` oder `Exploration ε`;
+  Symbole werden nicht künstlich erfunden, wenn es keine gebräuchliche
+  Notation gibt. Die übrige Oberfläche und die Erklärungen bleiben deutsch
 - komplexe Parameter erhalten kurze Erklärungen
 - Eingaben werden vor einer Aktion vollständig validiert und atomar übernommen
 - notwendige Resets des Lernzustands werden verständlich angezeigt
@@ -169,14 +170,27 @@ der README dokumentiert.
 - Steuerungsbuttons stehen in dieser dritten Spalte untereinander, nutzen die
   volle Spaltenbreite und besitzen ausreichend große, einheitliche
   Klickflächen
+- Eingabefelder und Auswahlfelder stehen innerhalb ihrer Parametergruppe
+  rechtsbündig. Ihre Breite orientiert sich am längsten erwartbaren regulären
+  Wert: so schmal wie sinnvoll, aber groß genug, dass typische Werte ohne
+  Abschneiden oder horizontales Scrollen lesbar sind
 - der untere Bereich nutzt die gesamte Fensterbreite für Diagramme, Vergleiche
   und Summary
 - Diagramm beziehungsweise Vergleichsgraph und Summary sind im unteren Bereich
   gleichzeitig nebeneinander sichtbar; die Summary liegt nicht in einem
   separaten Tab und der Graph erhält den deutlich größeren Platzanteil
+- Diagramm und Summary können über klar bezeichnete Aktionen exportiert
+  werden. Der Graph wird mindestens als PNG in der aktuell dargestellten Form
+  gespeichert; die Summary wird als gut lesbare UTF-8-Textdatei exportiert.
+  Ein CSV-Export ist nicht erforderlich. Dateidialoge schlagen aussagekräftige
+  Dateinamen vor und überschreiben bestehende Dateien nicht unbemerkt
 - Bedienpanel und Visualisierung erhalten feste beziehungsweise gewichtete
   Platzanteile, sodass keines der beiden durch die Wunschgröße des anderen
   verdrängt oder auf 1 × 1 Pixel reduziert wird
+- die Environment-Animation nutzt den gesamten verbleibenden Platz ihres
+  Bereichs. Frames werden unter Beibehaltung ihres Seitenverhältnisses auf die
+  größtmögliche vollständig sichtbare Größe skaliert; kein Teil des Frames darf
+  abgeschnitten werden
 - Tabs für sinnvolle Diagramme und Vergleiche
 - alle wesentlichen Parameter und Steuerungsbuttons sind bei der
   Mindestfenstergröße gleichzeitig sichtbar; Scrollen ist nur ein Fallback für
@@ -213,7 +227,9 @@ Queue; Worker greifen nie direkt auf Tkinter-Widgets zu. Plot- und
 Statusaktualisierungen werden auf eine sinnvolle Frequenz begrenzt.
 
 Massentraining läuft ohne Einzelbildanimation. Sichtbare Episoden besitzen eine
-abschaltbare Animation mit einstellbarem Intervall. Abbruch wird regelmäßig
+abschaltbare Animation mit einer im Projekt sinnvoll festgelegten
+Abspielgeschwindigkeit. Ein Feld für `Animation Δt` oder ein vergleichbarer
+Geschwindigkeitsparameter wird nicht angeboten. Abbruch wird regelmäßig
 geprüft; beim Schließen werden Worker und Ressourcen sauber beendet.
 
 Auf macOS dürfen Tkinter und ein SDL-/Pygame-Renderer nicht im selben Prozess
