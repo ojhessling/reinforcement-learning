@@ -60,18 +60,12 @@ class TaxiEnvironment:
         self.fickle_passenger = bool(fickle_passenger)
         self.max_steps = max_steps
         self.seed = seed
-        # Gymnasium no longer provides Taxi-v3.  Some course-specific Taxi
-        # environments accept the optional weather parameters, while stock
-        # Gymnasium Taxi-v4 does not.
-        try:
-            self._environment = gym.make(
-                "Taxi-v4",
-                is_rainy=self.is_rainy,
-                fickle_passenger=self.fickle_passenger,
-                render_mode="rgb_array",
-            )
-        except TypeError:
-            self._environment = gym.make("Taxi-v4", render_mode="rgb_array")
+        self._environment = gym.make(
+            "Taxi-v3",
+            is_rainy=self.is_rainy,
+            fickle_passenger=self.fickle_passenger,
+            render_mode="rgb_array",
+        )
         if seed is not None:
             self._environment.action_space.seed(seed)
         self.reset(seed=seed)
