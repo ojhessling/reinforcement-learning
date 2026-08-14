@@ -1,0 +1,10 @@
+gymnasium==1.2.3
+stable-baselines3==2.9.0
+torch>=2.3
+numpy
+matplotlib
+pillow
+pygame>=2.5
+# swig muss vor box2d installiert werden: das Box2D-Paket benoetigt es zum Bauen.
+swig
+box2d
