@@ -17,3 +17,9 @@ dependencies:
       # Box2D wird ab 10-lunarlander fuer die Gymnasium-Box2D-Environments gebraucht.
       - swig
       - box2d
+      # mujoco und imageio bilden das Gymnasium-Extra "gymnasium[mujoco]" und
+      # werden ab 13-hopper fuer die MuJoCo-Environments gebraucht. imageio
+      # importiert gymnasium.envs.mujoco.mujoco_rendering; ohne es scheitert
+      # bereits das Erzeugen von Hopper-v5.
+      - mujoco>=3.2
+      - imageio>=2.14.1

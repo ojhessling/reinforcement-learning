@@ -140,7 +140,7 @@ angegebenem Seed zurück.
   kennt, werden weggelassen und nicht als deaktivierte Felder mitgeschleppt
 - ein Verfahrenswechsel im Dropdown lädt die Standardwerte des neu gewählten
   Verfahrens in diesen Tab und setzt ausschließlich den Lernzustand dieses
-  Slots zurück; der andere Slot bleibt unberührt
+  Slots zurück; die übrigen Slots bleiben unberührt
 - Parameter werden fachlich gruppiert und so kompakt angeordnet, dass sie auf
   typischen Laptop-Auflösungen möglichst ohne Scrollen auf einen Blick sichtbar
   sind; lange, ungegliederte Ein-Spalten-Listen sind zu vermeiden
@@ -203,8 +203,26 @@ In **jedem** Verfahrenstab einstellbar:
 - Hidden Layers für Actor und Critic getrennt, Aktivierungsfunktion, Optimizer
   sowie dessen `eps` und `weight_decay`
 
-Global außerhalb der Tabs, weil beide Läufe dieselben Stützstellen brauchen:
-Intervall und Episodenzahl der deterministischen Zwischenevaluation.
+Global außerhalb der Tabs, weil alle Läufe dieselben Stützstellen brauchen:
+`Anzahl Verfahren` sowie Intervall und Episodenzahl der deterministischen
+Zwischenevaluation.
+
+Für die Standardwerte gilt verbindlich:
+
+- Der Standardwert von `total_timesteps` ist für **alle** Verfahren eines
+  Projekts derselbe. Unterschiedliche Startbudgets machten den Vergleich schon
+  ohne Zutun des Benutzers unfair. Vorzugswürdig ist das Budget des
+  environmentspezifischen Profils: Nur damit erreichen die Verfahren die
+  Ergebnisse, für die ihre Hyperparameter getunt wurden. Ist es interaktiv
+  nicht abwartbar, nennt der Prompt einen begründet kleineren Wert und sagt,
+  was dadurch verloren geht. In jedem Fall nennt der Prompt die zu erwartende
+  Laufzeit, damit niemand versehentlich einen Mehrstundenlauf startet.
+- Der Standardwert des Evaluationsintervalls beträgt rund ein Zehntel des
+  Schrittbudgets. Ein Standardlauf liefert damit ungefähr zehn Stützstellen –
+  genug für eine aussagekräftige Kurve, ohne den Lauf durch Evaluationen
+  auszubremsen.
+
+Der projektspezifische Prompt nennt beide Zahlen ausdrücklich.
 
 Technische Optionen wie `verbose`, `tensorboard_log`, `device`, die
 `policy`-Kennung und `_init_setup_model` gehören nicht in die UI.
@@ -224,7 +242,7 @@ Die Daten werden nach dem Update verworfen; einen Replay Buffer gibt es nicht.
 Zusätzliche UI-Parameter: `n_steps`, `n_epochs`, `gae_lambda`, `clip_range`,
 `clip_range_vf` (leer bedeutet aus), `normalize_advantage`, `ent_coef`,
 `vf_coef`, `max_grad_norm`, `target_kl` (leer bedeutet aus), `use_sde`,
-`sde_sample_freq`, `log_std_init`.
+`sde_sample_freq`, `log_std_init`, `ortho_init`.
 
 Prüfregeln: `batch_size` muss `n_steps` teilen, sonst verwirft
 Stable-Baselines3 Daten und warnt erst zur Laufzeit; `total_timesteps` muss
@@ -321,8 +339,10 @@ passen. Wählbar bleibt die Option trotzdem.
 ### Fairness von On-Policy gegen Off-Policy
 
 Ein Vergleich von PPO gegen TD3 oder SAC fällt bei gleichem Schrittbudget
-systematisch zugunsten der Off-Policy-Verfahren aus: Diese lernen aus jedem
-gespeicherten Übergang mehrfach, PPO verwirft seine Daten nach jedem Update.
+systematisch zugunsten der Off-Policy-Verfahren aus. Das gilt erst recht, wenn
+ein Vergleich mit drei oder vier Slots ein On-Policy-Verfahren gegen mehrere
+Off-Policy-Verfahren stellt: Diese lernen aus jedem gespeicherten Übergang
+mehrfach, PPO verwirft seine Daten nach jedem Update.
 Das ist kein Messfehler, sondern eine Eigenschaft der Verfahrensklassen.
 Bedienungsanleitung und README sagen das ausdrücklich.
 
@@ -374,7 +394,11 @@ Für jedes eingesetzte Verfahren aus diesem Katalog wird zusätzlich geprüft:
   werden. Der Graph wird mindestens als PNG in der aktuell dargestellten Form
   gespeichert; die Summary wird als gut lesbare UTF-8-Textdatei exportiert.
   Ein CSV-Export ist nicht erforderlich. Dateidialoge schlagen aussagekräftige
-  Dateinamen vor und überschreiben bestehende Dateien nicht unbemerkt
+  Dateinamen vor und überschreiben bestehende Dateien nicht unbemerkt. Die
+  Exportschaltflächen bekommen **keine** eigene Kopfzeile: Sie liegen kompakt
+  in einer ohnehin vorhandenen Leiste – etwa der Tableiste des Diagramms oder
+  der Titelzeile der Summary –, damit die gesamte übrige Höhe der Darstellung
+  gehört. Sie dürfen dabei weder Kurven noch Legende noch Text überdecken
 - Bedienpanel und Visualisierung erhalten feste beziehungsweise gewichtete
   Platzanteile, sodass keines der beiden durch die Wunschgröße des anderen
   verdrängt oder auf 1 × 1 Pixel reduziert wird
@@ -401,8 +425,12 @@ gemappt sein und innerhalb des sichtbaren Fensters liegen. Dies gilt auch für
 alle Eingabefelder, Auswahlfelder, Checkboxen und Fortschrittsanzeigen. Der Test
 läuft mit der vorgesehenen Startfenstergröße und initialen Splitterposition.
 Eine reine Konstruktion der Widgets reicht nicht als Layout-Test. Geprüft
-werden beide Verfahrenstabs, also auch die Eingabefelder des zunächst nicht
-sichtbaren Tabs nach dem Umschalten.
+werden alle aktiven Verfahrenstabs, also auch die Eingabefelder der zunächst
+nicht sichtbaren Tabs nach dem Umschalten, und zwar bei der größten vom Projekt
+unterstützten Zahl von Verfahren. Zusätzlich wird das Animationsraster mit
+einer, zwei, drei und vier sichtbaren Anzeigen geprüft: Alle Bilder liegen
+vollständig im sichtbaren Fenster und keine Zelle wird auf eine unbrauchbare
+Größe zusammengedrückt.
 
 Controls spiegeln den Zustand `Bereit`, `Läuft`, `Gestoppt`, `Abgeschlossen`
 oder `Fehler` wider. Inkompatible Aktionen werden gezielt deaktiviert und nach
@@ -410,25 +438,47 @@ Erfolg, Abbruch oder Fehler wieder freigegeben.
 
 Jede App besitzt eine `Bedienungsanleitung`. Sie erklärt kurz den empfohlenen
 Ablauf, Environment und Rewards, Methoden, Training gegenüber Evaluation, die
-Bedeutung der beiden Verfahrensslots, Parameter, Ansichten und typische
-Ursachen ausbleibenden Lernerfolgs.
+Bedeutung der Verfahrensslots und ihrer Anzahl, Parameter, Ansichten und
+typische Ursachen ausbleibenden Lernerfolgs. Sie erklärt außerdem, dass die
+Werte neben der Animation erst beim Überfahren des Bildes erscheinen – sonst
+sucht der Benutzer sie vergeblich unter dem Bild.
 
 ### Verfahrenswahl und Vergleichstabs
 
-Projekte mit mehreren Algorithmen bieten immer genau zwei gleichrangige
-Verfahrensslots an. Über den beiden Parameterspalten stehen dafür die Dropdowns
-`Verfahren 1` und `Verfahren 2`, in denen jeweils einer der verfügbaren
-Algorithmen gewählt wird. Beide Slots dürfen denselben Algorithmus enthalten.
-Damit lassen sich sowohl zwei verschiedene Verfahren als auch zwei
-Parametrisierungen desselben Verfahrens vergleichen.
+Projekte mit mehreren Algorithmen bieten bis zu **vier** gleichrangige
+Verfahrensslots an. Damit lassen sich mehrere Algorithmen, mehrere
+Parametrisierungen desselben Algorithmus oder eine Mischung aus beidem in einem
+einzigen Lauf nebeneinanderstellen.
 
-Darunter liegen zwei gleich aufgebaute Tabs `Verfahren 1` und `Verfahren 2`.
-Jeder Tab enthält vollständig und unabhängig die Parameter des dort gewählten
+Wie viele Slots aktiv sind, legt das Auswahlfeld `Anzahl Verfahren` mit den
+Werten `2`, `3` und `4` fest. Es liegt global außerhalb der Tabs bei den
+übrigen gemeinsamen Einstellungen; der projektspezifische Prompt nennt seinen
+Standardwert.
+
+Über den Parameterspalten stehen die Dropdowns `Verfahren 1` bis `Verfahren 4`,
+in denen jeweils einer der verfügbaren Algorithmen gewählt wird. Mehrere Slots
+dürfen denselben Algorithmus enthalten.
+
+Darunter liegen gleich aufgebaute Tabs `Verfahren 1` bis `Verfahren 4`. Jeder
+Tab enthält vollständig und unabhängig die Parameter des dort gewählten
 Algorithmus, einschließlich Trainingsbudget, Seed und Netzwerkparametern.
 Parameter werden nicht zwischen den Slots geteilt. Global außerhalb der Tabs
-bleiben nur Einstellungen, die für einen fairen Vergleich in beiden Läufen
-identisch sein müssen, etwa Intervall und Umfang der deterministischen
-Zwischenevaluation.
+bleiben nur Einstellungen, die für einen fairen Vergleich in allen Läufen
+identisch sein müssen, also `Anzahl Verfahren` sowie Intervall und Umfang der
+deterministischen Zwischenevaluation.
+
+Nicht aktive Slots verschwinden vollständig – weder ihr Dropdown noch ihr Tab
+wird erzeugt. Deaktivierte Karteileichen mitzuschleppen widerspricht der Regel
+für nicht unterstützte Parameter. Beim Ändern von `Anzahl Verfahren` gilt:
+
+- Wird die Zahl kleiner und besitzt ein wegfallender Slot bereits einen
+  Lernzustand oder Messdaten, fragt die GUI verständlich nach und verwirft ihn
+  erst nach Bestätigung.
+- Wird die Zahl größer, starten die neuen Slots mit den Standardwerten ihres
+  Algorithmus und ohne Lernzustand.
+- Die bereits vorhandenen Slots bleiben in beiden Fällen unberührt.
+- War der aktive Slot ein wegfallender, wird `Verfahren 1` aktiv.
+- Während eines laufenden Trainings oder Vergleichs ist das Feld gesperrt.
 
 Genau ein Slot ist das aktive Verfahren. Er ergibt sich aus dem gewählten Tab
 und wird über den Steuerungsbuttons unübersehbar angezeigt, zum Beispiel
@@ -436,8 +486,19 @@ und wird über den Steuerungsbuttons unübersehbar angezeigt, zum Beispiel
 Verfahren. Läuft bereits ein Einzellauf, bleibt dessen Ziel fixiert: Ein
 Tabwechsel ändert dann nur die angezeigten Parameter, nicht den laufenden Lauf.
 
-Enthält ein Projekt nur einen Algorithmus, entfallen die Dropdowns; die beiden
-Tabs bleiben und vergleichen zwei Parametrisierungen desselben Verfahrens.
+Jeder Slot besitzt eine feste Farbe. Sie ist in Vergleichsgraph, Legende,
+Summary-Kopfzeile und Animationsbeschriftung durchgängig dieselbe, sodass sich
+eine Kurve ohne Nachschlagen ihrem Bild und ihrer Spalte zuordnen lässt:
+
+| Slot | Farbe |
+| --- | --- |
+| `Verfahren 1` | Blau |
+| `Verfahren 2` | Rot |
+| `Verfahren 3` | Gelb |
+| `Verfahren 4` | Grün |
+
+Enthält ein Projekt nur einen Algorithmus, entfallen die Dropdowns; die Tabs
+bleiben und vergleichen mehrere Parametrisierungen desselben Verfahrens.
 
 ### Steuerungsbuttons
 
@@ -453,8 +514,8 @@ Steuerungsbuttons in dieser Reihenfolge:
 7. `Neues Modell`
 
 Die Buttons 1, 3, 4, 6 und 7 wirken auf das aktive Verfahren, Button 5 immer
-auf beide Slots. Buttons zum manuellen Speichern und Laden gibt es nicht: Der
-Lernzustand wird über den automatischen Checkpoint des besten
+auf alle aktiven Slots. Buttons zum manuellen Speichern und Laden gibt es
+nicht: Der Lernzustand wird über den automatischen Checkpoint des besten
 Evaluationsergebnisses gesichert und mit Button 6 zurückgeholt.
 
 Darunter folgen die Animationssteuerung gemäß `Animation`, die
@@ -478,17 +539,19 @@ sauber beendet.
 
 ### Animation
 
-Die Animation besitzt genau **einen** Schalter und ein Eingabefeld, beide
-global neben den Steuerungsbuttons und keinem Verfahrensslot zugeordnet:
+Global neben den Steuerungsbuttons und keinem Verfahrensslot zugeordnet
+besitzt die Animation genau **einen** Schalter und ein Eingabefeld:
 
 - `Animation zeigen` schaltet die Einzelbildanimation ein und aus – jederzeit,
   auch mitten in einem laufenden Trainings- oder Vergleichslauf. Eingeschaltet
   zeigt sie sowohl einzeln abgespielte Episoden als auch den laufenden Lauf.
 - `Bildrate (FPS)` legt die Abspielgeschwindigkeit fest. Standardwert ist die
-  environment-eigene Bildrate `env.metadata["render_fps"]`; gültig sind ganze
-  Zahlen von 1 bis 120. Die Validierung nennt wie überall Feld, Wert und
-  Bereich. Eine Änderung wirkt spätestens mit der nächsten sichtbaren Episode,
-  auch während eines Laufs.
+  environment-eigene Bildrate `env.metadata["render_fps"]`. Gültig sind ganze
+  Zahlen von 1 bis zu einer Obergrenze, die der projektspezifische Prompt
+  nennt; sie liegt nie unter der environment-eigenen Bildrate, sonst wäre der
+  Standardwert selbst ungültig. Sagt der Prompt nichts, gilt 1 bis 120. Die
+  Validierung nennt wie überall Feld, Wert und Bereich. Eine Änderung wirkt
+  spätestens mit der nächsten sichtbaren Episode, auch während eines Laufs.
 
 Während eines Trainings- oder Vergleichslaufs zeigt die Animation fortlaufend
 Episoden, die der **aktuelle Lernstand** im isolierten Renderprozess spielt.
@@ -502,12 +565,97 @@ Worker gerade trainiert. Jede sichtbare Episode zeigt damit den Lernstand zu
 ihrem Beginn, nicht den fortlaufend aktualisierten.
 
 Läuft ein Einzeltraining, zeigt die Animation dessen fixierten Slot. Läuft ein
-Vergleich, zeigt sie **beide Verfahren gleichzeitig**, jedes mit eigenem Bild
-und eigener Messwertanzeige. Außerhalb eines Laufs ist genau das Anzeigefeld des
-aktiven Verfahrens sichtbar. Die Größe der Einzelbilder leitet sich aus dem
-verfügbaren Platz und der Zahl der Anzeigen ab, nicht aus der Größe des zuletzt
-gezeigten Bildes – sonst behielte ein einmal großes Bild seinen Platz und
-verdrängte die zweite Anzeige.
+Vergleich, zeigt sie **alle aktiven Verfahren gleichzeitig**, jedes mit eigenem
+Bild und eigener Beschriftung. Außerhalb eines Laufs ist genau das Anzeigefeld
+des aktiven Verfahrens sichtbar.
+
+Die sichtbaren Anzeigefelder liegen in einem Raster mit höchstens zwei Spalten
+und höchstens zwei Zeilen:
+
+| Sichtbare Anzeigen | Raster |
+| --- | --- |
+| 1 | eine Anzeige über den gesamten Bereich |
+| 2 | zwei nebeneinander in einer Zeile |
+| 3 | zwei in der ersten Zeile, eine in der zweiten |
+| 4 | zwei je Zeile und zwei je Spalte |
+
+Alle Rasterzellen sind gleich groß; Zeilen und Spalten erhalten dasselbe
+Gewicht, damit keine Zelle die übrigen verdrängt. Die Beschriftung unter dem
+Bild bekommt ihren Platz **vor** dem Bild zugeteilt: Ein Bild, das den
+verbleibenden Raum füllt, drückt sie sonst aus einer knappen Zelle heraus, ohne
+dass es auffällt. Der Layout-Test prüft die Beschriftung jeder sichtbaren
+Anzeige ausdrücklich mit. Die Größe der Einzelbilder
+leitet sich aus dem verfügbaren Platz und der Zahl der Anzeigen ab, nicht aus
+der Größe des zuletzt gezeigten Bildes – sonst behielte ein einmal großes Bild
+seinen Platz und verdrängte die übrigen Anzeigen. Die Zellen behalten ihre
+Position, während Episoden beginnen und enden; ein Slot, dessen Episode gerade
+zurückgesetzt wird, hinterlässt keine springende Lücke.
+
+Je Anzeige kommt höchstens ein weiteres, **slotgebundenes** Bedienelement
+hinzu: die Wahl, welchen Lernstand diese Animation zeigt. Sie wirkt nur auf
+ihre eigene Anzeige, sodass sich mehrere Verfahren unabhängig voneinander
+beobachten lassen, und steht **über** oder neben dem Bild – nie darunter, weil
+dort ausschließlich die Beschriftung aus dem nächsten Abschnitt Platz hat.
+Welche Stände zur Wahl stehen, legt der projektspezifische Prompt fest.
+
+Gezeigt wird standardmäßig der **aktuelle** Lernstand, und die Beschriftung
+nennt dazu die Nummer der zuletzt trainierten beziehungsweise verglichenen
+Episode – dieselbe Nummer, die auf der X-Achse der Graphen steht. Ein eigener,
+bei jedem Einschalten wieder bei 1 beginnender Animationszähler ist unzulässig:
+Er ließe sich dem Diagramm nicht zuordnen.
+
+Soll sich ein früherer Lernstand erneut abspielen lassen, wird genau der dafür
+nötige Zustand gesichert und keiner mehr. Ein Verlauf über alle Episoden
+scheidet aus: Bei großen Schrittbudgets entstehen Tausende Episoden, deren
+Policy-Kopien Gigabytes belegten und das Training ausbremsten. Der Prompt nennt,
+welche Stände gesichert werden. Ein so gesicherter Stand wird mit **festem
+Seed** abgespielt, damit die Wiederholung jedes Mal gleich aussieht, und die
+Beschriftung macht erkennbar, dass gerade nicht der aktuelle Stand läuft.
+
+#### Beschriftung und Messwerte
+
+Jede Anzeige trägt einen Titel, der Slot und Algorithmus nennt, etwa
+`Verfahren 3 – SAC`. Teilen sich mehrere Slots einen Algorithmus, ergänzt der
+Titel – genau wie die Legende des Vergleichsgraphen und mit demselben Wortlaut –
+den wichtigsten abweichenden Parameter, etwa
+`Verfahren 3 – SAC (Lernrate α 0.0003)`. Titel und Legende stammen aus
+derselben Quelle und laufen deshalb nie auseinander.
+
+Unter jedem Animationsbild steht dauerhaft eine kurze Zeile mit genau diesen
+drei Angaben und nichts sonst:
+
+- Episode
+- Schritt innerhalb der Episode
+- bisher kumulierter Return der laufenden Episode
+
+Das Verfahren gehört nicht in diese Zeile, sondern in den Titel der Anzeige:
+In einer schmalen Rasterzelle ist der Platz knapp, und der Titel steht ohnehin
+unmittelbar darüber. Die Zeile darf abkürzen, etwa `E: 57 · S: 354/1000 ·
+R: 2.700,0`. Sie hat einen festen Aufbau und eine feste Höhe, damit die Bilder
+beim Weiterzählen nicht springen. Weitere Messwerte gehören nicht darunter: Bei
+vier Anzeigen bliebe sonst kein Platz mehr für die Bilder selbst.
+
+Alle übrigen Messwerte – insbesondere die gewählte Action, dazu je nach Projekt
+die Observationswerte – erscheinen ausschließlich, solange der Mauszeiger über
+dem zugehörigen Animationsbild steht. Sie werden **neben** dem Bild
+eingeblendet, damit Bild und Werte gleichzeitig sichtbar bleiben. Verbindlich
+gilt:
+
+- Die Einblendung verdeckt ihr eigenes Bild nicht, weder ganz noch teilweise,
+  und schneidet es nicht ab.
+- Erscheinen und Verschwinden der Einblendung verändern Größe und Position der
+  Animationsbilder nicht. Entweder ist der Platz dauerhaft reserviert, oder die
+  Einblendung liegt als Overlay über dem Nachbarbereich, nie über dem eigenen
+  Bild.
+- Die Einblendung gehört zu genau dem Bild, über dem der Zeiger steht, und
+  nennt dessen Slot. Steht der Zeiger über keinem Bild, ist keine Einblendung
+  sichtbar.
+- Sie aktualisiert sich mit derselben Frequenz wie das Bild und zeigt die Werte
+  des gerade dargestellten Frames, nicht die eines älteren.
+- Sie ist gut lesbar: fester Zeichensatz, ausreichender Kontrast, feste
+  Spaltenbreiten, damit Zahlen beim Aktualisieren nicht wandern.
+- Welche Werte sie im Einzelnen enthält, legt der projektspezifische Prompt
+  fest.
 
 Die Animation kostet Rechenzeit und verlangsamt das Training spürbar. Die
 eingestellte Bildrate ist dabei eine Obergrenze: Während eines Laufs
@@ -515,11 +663,24 @@ konkurrieren Training und Rendern um Rechenzeit, sodass die tatsächliche Rate
 darunter liegen kann. Weise in der Bedienungsanleitung auf beides hin und halte
 den Lauf ohne Animation voll funktionsfähig.
 
-Auf macOS dürfen Tkinter und ein SDL-/Pygame-Renderer nicht im selben Prozess
+Auf macOS dürfen Tkinter und ein nativer Grafikkontext des Renderers – ein
+SDL-/Pygame-Fenster ebenso wie ein OpenGL-Kontext – nicht im selben Prozess
 initialisiert werden, wenn dies zu nativen Abstürzen führen kann. In diesem Fall
-läuft ausschließlich das Rendering in einem isolierten, unsichtbaren Prozess
-mit headless SDL-Treiber; die GUI erhält nur RGB-Frames. Der Hilfsprozess erzeugt
-keinen zusätzlichen Dock-Eintrag und wird beim Schließen beendet.
+läuft ausschließlich das Rendering in einem isolierten, unsichtbaren Prozess mit
+headless Grafiktreiber; die GUI erhält nur RGB-Frames. Der projektspezifische
+Prompt nennt den dafür nötigen Treiber und die Umgebungsvariable, die ihn
+auswählt. Die Hilfsprozesse erzeugen weder ein eigenes Fenster noch einen
+zusätzlichen Dock- oder Programmeintrag und werden beim Schließen beendet.
+Genügt der naheliegende Treiber dieser Bedingung nicht, wird ein passender
+gewählt und die Wahl begründet – ein Dock-Eintrag je Anzeige ist kein
+hinnehmbarer Nebeneffekt, sondern ein Fehler.
+
+Jede sichtbare Anzeige erhält ihren **eigenen** Renderprozess mit eigener
+Environment-Instanz; Environment-Instanzen werden auch hier nicht geteilt. Bei
+vier Anzeigen laufen also vier Hilfsprozesse. Das kostet spürbar Rechenzeit und
+Speicher: Die Bedienungsanleitung sagt, dass mehr gleichzeitige Animationen den
+Lauf stärker ausbremsen, und die Anwendung bleibt ohne Animation voll
+funktionsfähig.
 
 ## Visualisierung und Vergleich
 
@@ -527,10 +688,17 @@ Zeige nur für Environment und Algorithmus sinnvolle Metriken, beispielsweise
 Episode-Return, gleitenden Durchschnitt, Erfolgsrate, Episodenlänge,
 Exploration, Environment-Schritte und bei neuronalen Netzen den Loss.
 
-- Achsen, Einheiten und Methoden sind beschriftet.
+- Achsen, Einheiten und Methoden sind beschriftet. Die Achsenbeschriftung
+  bleibt dabei knapp; Wertungen wie „höher ist besser" und Schwellen gehören in
+  Legende, Summary und Hilfetexte, nicht an die Achse.
+- Über den Achsen steht keine zusätzliche Überschrift, wenn der Tab- oder
+  Gruppentitel bereits sagt, was zu sehen ist: Der Platz gehört den Kurven.
 - Wenn neben dem Plot ausreichend Breite vorhanden ist, liegt die Legende in
   einem reservierten Bereich außerhalb der Achsen. Sie darf weder Datenlinien
-  verdecken noch am Rand der Figure abgeschnitten werden.
+  verdecken noch am Rand der Figure abgeschnitten werden. Die Breite dieses
+  Bereichs wird aus der **tatsächlichen** Legendenbreite abgeleitet, nicht fest
+  gewählt: Sobald Labels den abweichenden Parameter mitführen, sprengen sie
+  jede feste Reserve.
 - Rohwerte und geglättete Werte sind unterscheidbar.
 - Training und Evaluation werden optisch getrennt.
 - Deterministische Evaluationsergebnisse werden in der Summary ausgewiesen und
@@ -559,21 +727,39 @@ Exploration, Environment-Schritte und bei neuronalen Netzen den Loss.
   Schrittbudget liegen. GUI und Summary zeigen ausgeführte Schritte,
   angefordertes Budget und diese Bedeutung getrennt und verständlich an.
 
-Der Vergleich stellt immer die beiden Verfahrensslots gegenüber. Ein
-gemeinsamer Vergleichsgraph ist verpflichtend; er zeigt beide Läufe mit
+Der Vergleich stellt immer alle aktiven Verfahrensslots gegenüber. Ein
+gemeinsamer Vergleichsgraph ist verpflichtend; er zeigt alle Läufe mit
 derselben aussagekräftigen X-Achse und derselben Metrik. Legende und
 Beschriftung benennen Slot und Algorithmus, etwa `V1 – PPO` und `V2 – SAC`.
-Enthalten beide Slots denselben Algorithmus, nennt das Label zusätzlich den
-wichtigsten abweichenden Parameter; Farbe und Linienstil unterscheiden die
-beiden Kurven in jedem Fall eindeutig. Bei mehreren Wiederholungen zeigt der
+Enthalten mehrere Slots denselben Algorithmus, nennt das Label zusätzlich den
+wichtigsten abweichenden Parameter. Bei mehreren Wiederholungen zeigt der
 Graph den Mittelwert und zusätzlich Standardabweichung oder
 95-%-Konfidenzintervall als Unsicherheitsband.
 
+Für die Linien gilt verbindlich:
+
+- Die Slots werden allein über die **Farbe** unterschieden, nicht über den
+  Linienstil. Jede hervorgehobene Slotkurve ist **durchgezogen**; gestrichelte
+  oder gepunktete Slotkurven sind unzulässig, weil sie bei vier Verfahren
+  schnell unlesbar werden.
+- Verwendet wird die Farbzuordnung aus `Verfahrenswahl und Vergleichstabs`:
+  Blau, Rot, Gelb, Grün. Die konkreten Farbwerte werden so gewählt, dass sich
+  die vier Kurven auf dem Hintergrund des Projekts deutlich voneinander und vom
+  Hintergrund abheben; auf einem dunklen Hintergrund also hinreichend helle,
+  kräftige Töne.
+- Referenz- und Schwellenlinien, etwa die Gelöst-Marke, sind **weiß und
+  gestrichelt**. Weiß ist keiner Slotfarbe zugeordnet und durchgezogen ist den
+  Slotkurven vorbehalten; damit lässt sich eine Referenzlinie weder in der
+  Farbe noch im Strich mit einer Datenlinie verwechseln.
+- Rohkurven verwenden dieselbe Slotfarbe mit deutlich verringerter Deckkraft
+  und geringerer Strichstärke, damit sie die hervorgehobene Kurve nicht
+  überdecken.
+
 Der Vergleichsgraph erscheint mit dem ersten verfügbaren Ergebnis und wird
-während beider Läufe in einem sinnvollen Intervall fortgeschrieben. Er darf
+während aller Läufe in einem sinnvollen Intervall fortgeschrieben. Er darf
 nicht erst nach Abschluss des gesamten Vergleichs angezeigt oder aktualisiert
-werden. Beide Slots starten parallel; die Fortschrittsanzeige aggregiert ihre
-tatsächlich ausgeführten Schritte. Ein erneut gestarteter, kompatibel
+werden. Alle aktiven Slots starten parallel; die Fortschrittsanzeige aggregiert
+ihre tatsächlich ausgeführten Schritte. Ein erneut gestarteter, kompatibel
 konfigurierter Vergleich setzt die Vergleichsmodelle nicht zurück, sondern
 setzt ihr Training fort und hängt neue Messpunkte an die vorhandenen Kurven an.
 Rohwerte werden dezent dargestellt; je Slot hebt eine kräftige Linie den
@@ -584,20 +770,23 @@ sichtbar. Parallel dazu wird auch die Summary live aktualisiert; sie zeigt für
 Training und Vergleich konsistent Episoden, ausgeführte Environment-Schritte,
 aktuelle beziehungsweise gemittelte Rewards und Erfolgsrate.
 
-Die Vergleichs-Summary besitzt genau zwei Ergebnisspalten, `Verfahren 1` und
-`Verfahren 2`, mit dem jeweiligen Algorithmusnamen in der Kopfzeile. Sie
-enthält zusätzlich einen Abschnitt, der genau die Parameter auflistet, in denen
-sich die beiden Konfigurationen unterscheiden. Ohne diesen Abschnitt ist ein
-Vergleich zweier Parametrisierungen desselben Algorithmus nicht
-interpretierbar. Unterscheiden sich die Trainingsbudgets der beiden Slots,
-weist die GUI vor dem Start sichtbar darauf hin; unzulässig ist es nicht.
+Die Vergleichs-Summary besitzt genau eine Ergebnisspalte je aktivem Slot,
+`Verfahren 1` bis `Verfahren 4`, mit dem jeweiligen Algorithmusnamen in der
+Kopfzeile. Sie enthält zusätzlich einen Abschnitt, der genau die Parameter
+auflistet, in denen sich die Konfigurationen unterscheiden – je Parameter eine
+Zeile mit dem Wert aller Slots. Ohne diesen Abschnitt ist ein Vergleich
+mehrerer Parametrisierungen desselben Algorithmus nicht interpretierbar.
+Unterscheiden sich die Trainingsbudgets der Slots, weist die GUI vor dem Start
+sichtbar darauf hin; unzulässig ist es nicht. Bei drei oder vier Spalten bleibt
+die Summary vollständig lesbar: Sie erhält bei Bedarf eine horizontale
+Scrollbar, statt Werte abzuschneiden.
 
 Lange Rohkurven werden nur für die Darstellung auf eine feste, angemessene
 Punktzahl verdichtet; die Messdaten selbst bleiben vollständig erhalten. Eine
 Min-/Max-Verdichtung ist einfachem Auslassen vorzuziehen, damit lokale Spitzen
 und Einbrüche sichtbar bleiben. Plot-Updates werden zeitlich gedrosselt.
 
-Vergleiche verändern das sichtbare Experiment nicht. Beide Slots erhalten
+Vergleiche verändern das sichtbare Experiment nicht. Alle Slots erhalten
 identische Environment-Konfigurationen und reproduzierbar abgeleitete Seeds.
 Trainingsbudget und Seed stammen aus dem jeweiligen Tab und sind bewusst frei
 wählbar, damit auch Budget- und Seed-Vergleiche möglich sind; das Budget wird
@@ -653,6 +842,19 @@ Tests laufen nicht beim normalen App-Start. Sie prüfen mindestens:
 - einen Vergleichslauf mit zweimal demselben Algorithmus und unterschiedlichen
   Parametern: Beide Slots besitzen getrennte Lernzustände, Ergebnisse und
   Kurven und beeinflussen sich nicht
+- einen Vergleichslauf über mehr als zwei Slots, mindestens über die vom
+  Projekt unterstützte Höchstzahl: Jeder Slot besitzt getrennte Lernzustände,
+  Ergebnisse und Kurven, die Summary erhält je Slot eine Spalte und die
+  Fortschrittsanzeige aggregiert alle Slots
+- das Verkleinern und Vergrößern von `Anzahl Verfahren`: wegfallende Slots
+  werden erst nach Bestätigung verworfen, neu hinzukommende starten mit den
+  Standardwerten ihres Algorithmus, bestehende Slots bleiben unverändert
+- die Farbzuordnung der Slots und den Linienstil des Vergleichsgraphen: je Slot
+  die vorgesehene Farbe, alle hervorgehobenen Slotkurven durchgezogen, die
+  Referenzlinie weiß und gestrichelt
+- die Beschriftung unter dem Animationsbild enthält genau Episode, Schritt,
+  Verfahren und Return; Action- und Observationswerte erscheinen dort nicht,
+  sondern nur in der Einblendung neben dem Bild
 - Import und Konstruktion der App-Komponenten
 
 Bei neuronalen Netzen werden zusätzlich Ein- und Ausgabeformen, Targets, Loss,
@@ -674,6 +876,6 @@ Die README enthält:
 - Methoden und wesentliche Formeln in verständlicher Sprache
 - Parameter, Standardwerte und Quellen
 - Bedienablauf und Interpretation der Ansichten
-- Verfahrensslots und Vergleichslogik sowie Speichern und Laden, sofern
-  vorhanden
+- Verfahrensslots, ihre Anzahl und die Vergleichslogik sowie Speichern und
+  Laden, sofern vorhanden
 - Testbefehl und bekannte Grenzen
