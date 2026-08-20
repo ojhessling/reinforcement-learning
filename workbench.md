@@ -1,11 +1,9 @@
 # Basis-Prompt für Reinforcement-Learning-Workbench-Projekte
 
-## Geltung
+## 1 Geltung
 
-Diese Datei enthält die verbindlichen Grundregeln für alle
-Reinforcement-Learning-Projekte im Ordner `Oliver`. Der projektspezifische
-Prompt definiert Environment, Algorithmen, Rewards, Hyperparameter und
-Besonderheiten und beginnt mit:
+Verbindliche Grundregeln für alle RL-Projekte im Ordner `Oliver`. Der
+projektspezifische Prompt beginnt mit:
 
 ```text
 Berücksichtige die verbindlichen Regeln aus ../workbench.md.
@@ -13,34 +11,44 @@ Projektname: {{project_name}}
 Environment: {{environment_name}}
 ```
 
-Bei Widersprüchen gilt folgende Priorität:
+- Priorität bei Widersprüchen: aktuelle Benutzeranweisung → Projekt-Prompt →
+  diese Datei.
+- Abweichungen werden im Projekt-Prompt ausdrücklich begründet.
+- Die Regeln gelten für neue Projekte. Abgeschlossene Projekte werden nicht
+  rückwirkend angepasst, sofern der Benutzer das nicht ausdrücklich verlangt.
 
-1. aktuelle Benutzeranweisung
-2. projektspezifischer Prompt
-3. diese Workbench-Spezifikation
+### 1.1 Was in den Projekt-Prompt gehört
 
-Abweichungen von dieser Spezifikation müssen im projektspezifischen Prompt
-ausdrücklich begründet werden.
+Nur diese sieben Punkte:
 
-Die Regeln gelten für neu erstellte Projekte. Bereits abgeschlossene Projekte
-werden nicht rückwirkend angepasst, sofern die Benutzeranweisung dies nicht
-ausdrücklich verlangt.
+1. Environment-Kennung und alle Konstruktorargumente
+2. Action- und Observation-Space, Reward, Episodenende
+3. Erfolgsdefinitionen und die daraus folgenden Metriken
+4. Standardprofile der Verfahren samt Quelle und begründeten Abweichungen
+5. Startbelegung der Slots und Standardwerte der globalen Einstellungen
+6. Bildgröße des Renderframes und Inhalt der Einblendung neben der Animation
+7. environmentbezogene Tests und Abnahmekriterien
 
-## Ziel und Sprache
+Alles andere – GUI, Bedienelemente, Farben, Linienstile, Beschriftungen,
+Export, Animationsraster, Rendering, Checkpoints, allgemeine Tests – steht
+**ausschließlich** hier und wird im Prompt nicht wiederholt, auch nicht
+zusammenfassend: Eine Kopie veraltet, sobald diese Datei sich ändert. Verweise
+genügen.
 
-Erstelle eine eigenständig lauffähige lokale Python-Anwendung für Developer
-und RL-Anfänger. Sie ermöglicht das Konfigurieren, Trainieren, Beobachten,
-Evaluieren und Vergleichen der vorgegebenen Verfahren. Die Anwendung läuft
-ohne Webserver, sofern der projektspezifische Prompt nichts anderes festlegt.
+## 2 Projekt
 
-- GUI, Hilfen, Meldungen, README und Prompt: Deutsch
+### 2.1 Ziel und Sprache
+
+Eigenständig lauffähige lokale Python-Anwendung für Developer und RL-Anfänger
+zum Konfigurieren, Trainieren, Beobachten, Evaluieren und Vergleichen. Kein
+Webserver, sofern der Prompt nichts anderes sagt.
+
+- GUI, Hilfen, Meldungen, README, Prompt: Deutsch
 - Code-Bezeichner: Englisch
-- Fachbegriffe dürfen verwendet werden, werden für Anfänger aber erklärt
-- fachlich wichtige Stellen erhalten kurze, hilfreiche Kommentare
+- Fachbegriffe erlaubt, für Anfänger erklärt
+- fachlich wichtige Stellen erhalten kurze Kommentare
 
-## Projektstruktur und Umgebung
-
-Mindeststruktur im Ordner des projektspezifischen Prompts:
+### 2.2 Dateien und Umgebung
 
 ```text
 {{project_name}}_app.py
@@ -52,443 +60,342 @@ tests/
     test_{{project_name}}_logic.py
 ```
 
-- Die App-Datei enthält nur den Entry Point.
+- App-Datei: nur der Entry Point.
 - Logikmodule importieren kein Tkinter; die GUI enthält keine Lernformeln.
-- Zusätzliche Module werden nur bei erkennbarem Nutzen angelegt.
-- Modul- und Testdateinamen sind repository-weit eindeutig. Greift ein neues
-  Projekt dasselbe Environment wie ein früheres auf, erhält `{{project_name}}`
-  ein unterscheidendes Suffix, damit `pytest` vom Repository-Root nicht an
-  gleichnamigen Testdateien ohne Paketkontext scheitert.
-- Laufzeitergebnisse und lokale virtuelle Umgebungen werden nicht committed.
-- Alle Projekte verwenden `Oliver/environment.yml`.
-- Direkte Abhängigkeiten stehen zusätzlich in `requirements.txt`; neue Pakete
-  werden nur bei Bedarf aufgenommen und auf Konflikte geprüft.
-- Neuronale Netze werden in diesem Kurs ausschließlich mit PyTorch umgesetzt.
-  TensorFlow und Keras werden nicht verwendet.
+- Zusätzliche Module nur bei erkennbarem Nutzen.
+- Modul- und Testdateinamen sind repository-weit eindeutig – sonst scheitert
+  `pytest` vom Repository-Root an gleichnamigen Testdateien ohne Paketkontext.
+  Greift ein Projekt ein früheres Environment erneut auf, bekommt
+  `{{project_name}}` ein unterscheidendes Suffix.
+- Laufzeitergebnisse und lokale venvs werden nicht committed.
+- Alle Projekte nutzen `Oliver/environment.yml`; direkte Abhängigkeiten stehen
+  zusätzlich in `requirements.txt`. Neue Pakete nur bei Bedarf und auf
+  Konflikte geprüft.
+- Neuronale Netze ausschließlich mit PyTorch. Kein TensorFlow, kein Keras.
 
-## Architektur
+### 2.3 Architektur
 
-### Environment
+- **Environment**: Spaces, Übergänge, Rewards, Reset, Seed, `terminated`,
+  `truncated`, ggf. Rendering. Keine GUI- und keine Lernlogik.
+- **Agenten**: je Algorithmus eine Klasse mit einheitlicher Schnittstelle für
+  Reset, Action-Auswahl, Lernen, Episodenende, Metriken, Speichern/Laden.
+- **Runner**: Training, Evaluation und Vergleich liegen nicht in
+  Button-Callbacks, sondern in getrennten Komponenten. Ergebnisse sind
+  Dataclasses oder typisierte Strukturen, keine positionsabhängigen Tupel.
+- **GUI**: Eingaben, Validierung, Runner-Steuerung, Visualisierung, Status,
+  Dialoge. Keine Reward-Regeln, Lernupdates oder Action-Auswahl.
 
-Das Environment verwaltet Observation- und Action-Space, Zustandsübergänge,
-Rewards, Reset, Seed, `terminated`, `truncated` und gegebenenfalls Rendering.
-Es enthält keine GUI- oder Lernlogik.
+## 3 Fachliche RL-Regeln
 
-Der projektspezifische Prompt legt die Kennung und alle abweichenden
-Konstruktorargumente fest. Eine gemeinsame Factory erzeugt daraus getrennte
-Instanzen für Training, deterministische Evaluation und sichtbare Animation.
-Rein headless Evaluationen verzichten auf Rendering, solange dieselbe
-unveränderte Environment-Spezifikation erhalten bleibt. Environment-Instanzen
-werden weder gleichzeitig noch threadübergreifend geteilt. Dynamik,
-Startzustandsverteilung, Reward und Abbruchregeln werden nicht verändert;
-eigenes Reward Shaping ist unzulässig.
+### 3.1 Environment-Factory
 
-### Agenten und Runner
+- Der Prompt legt Kennung und alle abweichenden Konstruktorargumente fest.
+- Eine gemeinsame Factory erzeugt getrennte Instanzen für Training,
+  deterministische Evaluation und Animation. Headless Evaluationen verzichten
+  auf Rendering, behalten aber dieselbe Environment-Spezifikation.
+- Instanzen werden weder gleichzeitig noch threadübergreifend geteilt.
+- Dynamik, Startzustandsverteilung, Reward und Abbruchregeln bleiben
+  unverändert; eigenes Reward Shaping ist unzulässig.
 
-Jeder Algorithmus besitzt eine eigene Klasse mit möglichst einheitlicher
-Schnittstelle für Reset, Action-Auswahl, Lernen, Episodenende, Metriken sowie
-gegebenenfalls Speichern und Laden.
+### 3.2 Training und Evaluation
 
-Training, Evaluation und Vergleich liegen nicht in Button-Callbacks, sondern
-in getrennten Runnern oder gleichwertig klar getrennten Komponenten. Ergebnisse
-werden durch Dataclasses oder eindeutig typisierte Strukturen statt
-positionsabhängiger Tupel dargestellt.
+Evaluation nutzt keine Exploration und keine Lernupdates, verändert weder
+Lernzustand noch Trainingsstatistiken und arbeitet mit eigenen Ergebnissen und
+definiertem Startzustand.
 
-### GUI
+### 3.3 Episodenende
 
-Die GUI ist für Eingaben, Validierungsfeedback, Runner-Steuerung,
-Visualisierung, Status und Dialoge verantwortlich. Reward-Regeln, Lernupdates
-und Action-Auswahl gehören nicht in die GUI.
+- `terminated`: fachlich terminaler Zustand · `truncated`: externes Limit ·
+  `done = terminated or truncated`
+- Ob bei Truncation gebootstrapt wird, ist je Algorithmus in Implementierung,
+  Tests und README konsistent festzulegen.
+- Liefert ein Environment **immer** `terminated=False`, ist Bootstrapping die
+  einzig richtige Behandlung – Abschneiden behauptete ein Episodenende, das die
+  Umgebung nicht kennt. Der Prompt hält das ausdrücklich fest.
 
-## Fachliche RL-Regeln
+### 3.4 Reproduzierbarkeit und Tie-Breaking
 
-### Training und Evaluation
+- Ein angegebener Seed wird für Python, NumPy, Environment, Action-Space und
+  verwendete Frameworks gesetzt; unabhängige Aufgaben erhalten getrennte
+  Generatoren. Ein Reset setzt Generatoren nur bei ausdrücklichem Seed zurück.
+- Gleich gute Actions werden mit numerischer Toleranz reproduzierbar zufällig
+  gewählt; die Policy-Ansicht zeigt alle gleichwertigen Actions.
+- Unbesuchte Werte erscheinen als `—` oder `?`, nicht als gelernte Nullwerte.
 
-Evaluation verwendet keine Exploration und keine Lernupdates. Sie verändert
-weder Lernzustand noch Trainingsstatistiken und verwendet eigene Ergebnisse
-sowie einen definierten Startzustand.
+## 4 Parameter
 
-### Episodenende
+- Allgemeine Parameter sind in jedem Verfahrenstab sichtbar.
+- Algorithmusspezifische Parameter erscheinen nur im Tab des Verfahrens, das
+  sie besitzt. Unbekannte Parameter werden **weggelassen**, nicht deaktiviert
+  mitgeschleppt.
+- Ein Verfahrenswechsel im Dropdown lädt die Standardwerte des neuen Verfahrens
+  und setzt nur den Lernzustand dieses Slots zurück; andere Slots bleiben
+  unberührt.
+- Parameter werden fachlich gruppiert und kompakt angeordnet – auf typischen
+  Laptop-Auflösungen möglichst ohne Scrollen sichtbar. Keine langen,
+  ungegliederten Ein-Spalten-Listen.
+- Bezeichnungen nutzen die üblichen englischen Fachnamen plus etabliertes
+  Symbol, etwa `Learning Rate α`, `Discount Factor γ`, `Exploration ε`. Symbole
+  werden nicht erfunden; die übrige Oberfläche bleibt deutsch.
+- Komplexe Parameter erhalten kurze Erklärungen.
+- Eingaben werden vor einer Aktion vollständig validiert und atomar übernommen;
+  Validierung prüft Wertebereiche, Abhängigkeiten sowie Netzwerk-, Buffer-,
+  Batch- und Modelldatei-Kompatibilität.
+- Fehlermeldungen nennen Feld, ungültigen Wert und gültigen Bereich.
+- Notwendige Resets des Lernzustands werden verständlich angezeigt.
 
-Unterscheide durchgängig:
+### 4.1 Neuronale Netze
 
-- `terminated`: fachlich terminaler Zustand
-- `truncated`: externes Limit
-- `done = terminated or truncated`
+Alle verwendeten Hyperparameter sind in der UI änderbar, je nach Verfahren
+insbesondere: Zahl und Größe der Hidden Layers, Aktivierung, Lernrate und
+Optimizer-Parameter, Batch-Größe, Initialisierung, Normalisierung,
+Regularisierung, Gradient Clipping, Target-Network-Update und Zahl der
+Gradientenschritte.
 
-Ob bei Truncation gebootstrapt wird, muss je Algorithmus in Implementierung,
-Tests und README konsistent festgelegt sein.
+Standardwerte stammen aus Fachliteratur, den SB3-Voreinstellungen oder einem
+environmentspezifischen Profil des RL Baselines3 Zoo; **Profile haben Vorrang**.
+Prompt und README nennen Quelle, Algorithmus und Version bzw. Profilstand.
+Abweichungen werden begründet, nicht unterstützte Optionen in der README
+dokumentiert.
 
-### Tie-Breaking und unbesuchte Zustände
+## 5 Verfahrenskatalog
 
-Gleich gute Actions werden mit numerischer Toleranz reproduzierbar zufällig
-ausgewählt. Die Policy-Ansicht zeigt alle gleichwertigen Actions. Unbesuchte
-Werte erscheinen als `—` oder `?`, nicht wie gelernte Nullwerte.
+Beschreibt mehrfach vorkommende Verfahren einmalig: fachlicher Kern,
+UI-Parameter, Prüfregeln, Quellen. Der Prompt nennt nur **welche** Verfahren
+ein Projekt nutzt, ihre Profile und Abweichungen. Fehlt ein Verfahren hier,
+beschreibt der Prompt es vollständig selbst.
 
-### Reproduzierbarkeit
+Verwendet werden die SB3-Implementierungen unverändert. Eigene Arbeit liegt in
+Konfiguration, Runnern, Metriken, Vergleich, GUI und Tests – nicht in einer
+Neuimplementierung.
 
-Ein angegebener Seed wird für Python, NumPy, Environment, Action-Space und
-verwendete Frameworks gesetzt. Unabhängige Aufgaben erhalten getrennte
-Zufallsgeneratoren. Ein Reset setzt Generatoren nur bei ausdrücklich
-angegebenem Seed zurück.
+### 5.1 Gemeinsame Parameter
 
-## Parameter
-
-- allgemeine Parameter sind in jedem Verfahrenstab sichtbar
-- algorithmusspezifische Parameter erscheinen ausschließlich im Tab des
-  Verfahrens, das sie besitzt. Parameter, die das dort gewählte Verfahren nicht
-  kennt, werden weggelassen und nicht als deaktivierte Felder mitgeschleppt
-- ein Verfahrenswechsel im Dropdown lädt die Standardwerte des neu gewählten
-  Verfahrens in diesen Tab und setzt ausschließlich den Lernzustand dieses
-  Slots zurück; die übrigen Slots bleiben unberührt
-- Parameter werden fachlich gruppiert und so kompakt angeordnet, dass sie auf
-  typischen Laptop-Auflösungen möglichst ohne Scrollen auf einen Blick sichtbar
-  sind; lange, ungegliederte Ein-Spalten-Listen sind zu vermeiden
-- Parameterbezeichnungen verwenden die üblichen englischen Fachnamen und,
-  sofern vorhanden, zusätzlich das etablierte mathematische Symbol,
-  beispielsweise `Learning Rate α`, `Discount Factor γ` oder `Exploration ε`;
-  Symbole werden nicht künstlich erfunden, wenn es keine gebräuchliche
-  Notation gibt. Die übrige Oberfläche und die Erklärungen bleiben deutsch
-- komplexe Parameter erhalten kurze Erklärungen
-- Eingaben werden vor einer Aktion vollständig validiert und atomar übernommen
-- notwendige Resets des Lernzustands werden verständlich angezeigt
-- Validierung berücksichtigt Wertebereiche, Abhängigkeiten sowie kompatible
-  Netzwerk-, Buffer-, Batch- und Modelldatei-Konfigurationen
-- Fehlermeldungen nennen Feld, ungültigen Wert und gültigen Bereich
-
-### Neuronale Netze
-
-Bei neuronalen Netzen müssen alle verwendeten Hyperparameter in der UI
-änderbar sein. Dazu gehören je nach Verfahren insbesondere:
-
-- Anzahl und Größe der Hidden Layers
-- Aktivierungsfunktion
-- Lernrate und Optimizer-Parameter
-- Batch-Größe
-- Initialisierung, Normalisierung, Regularisierung und Gradient Clipping
-- Target-Network-Update und Anzahl der Gradientenschritte
-
-Standardwerte werden aus einschlägiger Fachliteratur, den
-algorithmusspezifischen Voreinstellungen von Stable-Baselines3 oder einem
-passenden environmentspezifischen Profil des RL Baselines3 Zoo abgeleitet.
-Environment-spezifische Profile haben Vorrang vor allgemeinen Defaults. Prompt
-und README nennen Quelle, Algorithmus und Version beziehungsweise Profilstand.
-Abweichungen werden fachlich begründet, nicht unterstützte Optionen in
-der README dokumentiert.
-
-## Verfahrenskatalog
-
-Dieser Abschnitt beschreibt Verfahren, die in mehreren Projekten vorkommen,
-einmalig: fachlicher Kern, vollständige UI-Parameter, Prüfregeln, Quellen. Der
-projektspezifische Prompt nennt **welche** Verfahren ein Projekt verwendet,
-ihre environmentspezifischen Standardprofile und begründete Abweichungen – er
-wiederholt die Beschreibungen hier nicht. Verwendet ein Projekt ein Verfahren,
-das hier fehlt, beschreibt der Projekt-Prompt es vollständig selbst.
-
-Verwendet werden die Implementierungen von Stable-Baselines3 unverändert,
-sofern der projektspezifische Prompt nichts anderes verlangt. Eigene Arbeit
-liegt dann in Konfiguration, Runnern, Metriken, Vergleich, GUI und Tests, nicht
-in einer Neuimplementierung des Algorithmus.
-
-### Gemeinsame Parameter
-
-In **jedem** Verfahrenstab einstellbar:
-
-- `total_timesteps`
-- `learning_rate` mit wählbarem Verlauf `konstant` oder `linear fallend`
-  (Stable-Baselines3 akzeptiert dafür eine Callable-Schedule)
-- `batch_size`
-- `gamma`
-- `seed`
-- Hidden Layers für Actor und Critic getrennt, Aktivierungsfunktion, Optimizer
-  sowie dessen `eps` und `weight_decay`
+In jedem Verfahrenstab: `total_timesteps`, `learning_rate` mit Verlauf
+`konstant` oder `linear fallend` (SB3 akzeptiert eine Callable-Schedule),
+`batch_size`, `gamma`, `seed`, Hidden Layers für Actor und Critic getrennt,
+Aktivierung, Optimizer samt `eps` und `weight_decay`.
 
 Global außerhalb der Tabs, weil alle Läufe dieselben Stützstellen brauchen:
-`Anzahl Verfahren` sowie Intervall und Episodenzahl der deterministischen
-Zwischenevaluation.
+`Anzahl Verfahren` sowie Intervall und Episodenzahl der Zwischenevaluation.
 
-Für die Standardwerte gilt verbindlich:
+Nicht in die UI: `verbose`, `tensorboard_log`, `device`, `policy`-Kennung,
+`_init_setup_model`.
 
-- Der Standardwert von `total_timesteps` ist für **alle** Verfahren eines
-  Projekts derselbe. Unterschiedliche Startbudgets machten den Vergleich schon
-  ohne Zutun des Benutzers unfair. Vorzugswürdig ist das Budget des
-  environmentspezifischen Profils: Nur damit erreichen die Verfahren die
-  Ergebnisse, für die ihre Hyperparameter getunt wurden. Ist es interaktiv
-  nicht abwartbar, nennt der Prompt einen begründet kleineren Wert und sagt,
-  was dadurch verloren geht. In jedem Fall nennt der Prompt die zu erwartende
-  Laufzeit, damit niemand versehentlich einen Mehrstundenlauf startet.
-- Der Standardwert des Evaluationsintervalls beträgt rund ein Zehntel des
-  Schrittbudgets. Ein Standardlauf liefert damit ungefähr zehn Stützstellen –
-  genug für eine aussagekräftige Kurve, ohne den Lauf durch Evaluationen
-  auszubremsen.
+Standardwerte:
 
-Der projektspezifische Prompt nennt beide Zahlen ausdrücklich.
+- `total_timesteps` ist für **alle** Verfahren eines Projekts gleich – sonst
+  wäre der Vergleich schon ohne Zutun unfair. Vorzugswürdig ist das Budget des
+  Profils: Nur damit erreichen die Verfahren die Ergebnisse, für die sie getunt
+  wurden. Ist es interaktiv nicht abwartbar, nennt der Prompt einen begründet
+  kleineren Wert und sagt, was verloren geht.
+- Der Prompt nennt in jedem Fall die zu erwartende **Laufzeit**, damit niemand
+  versehentlich einen Mehrstundenlauf startet.
+- Das Evaluationsintervall beträgt rund ein Zehntel des Schrittbudgets – etwa
+  zehn Stützstellen je Standardlauf.
+- Der Prompt nennt beide Zahlen ausdrücklich.
 
-Technische Optionen wie `verbose`, `tensorboard_log`, `device`, die
-`policy`-Kennung und `_init_setup_model` gehören nicht in die UI.
+### 5.2 PPO
 
-### PPO
-
-On-Policy-Verfahren. Es sammelt Rollouts fester Länge, schätzt Vorteile mit
-Generalized Advantage Estimation und optimiert über mehrere Epochen auf
-denselben Daten ein geclipptes Surrogatziel:
+On-Policy: Rollouts fester Länge, Vorteile per GAE, mehrere Epochen auf
+denselben Daten mit geclipptem Surrogatziel. Daten werden nach dem Update
+verworfen; kein Replay Buffer.
 
 ```text
 L = E[ min( r(θ)·Â , clip(r(θ), 1-ε, 1+ε)·Â ) ]   mit r(θ) = π_θ(a|s) / π_alt(a|s)
 ```
 
-Die Daten werden nach dem Update verworfen; einen Replay Buffer gibt es nicht.
+- Zusätzliche UI-Parameter: `n_steps`, `n_epochs`, `gae_lambda`, `clip_range`,
+  `clip_range_vf` (leer = aus), `normalize_advantage`, `ent_coef`, `vf_coef`,
+  `max_grad_norm`, `target_kl` (leer = aus), `use_sde`, `sde_sample_freq`,
+  `log_std_init`, `ortho_init`.
+- Prüfregeln: `batch_size` muss `n_steps` teilen – sonst verwirft SB3 Daten und
+  warnt erst zur Laufzeit; `total_timesteps` muss einen vollständigen Rollout
+  zulassen.
+- Quellen: [PPO](https://arxiv.org/abs/1707.06347),
+  [GAE](https://arxiv.org/abs/1506.02438)
 
-Zusätzliche UI-Parameter: `n_steps`, `n_epochs`, `gae_lambda`, `clip_range`,
-`clip_range_vf` (leer bedeutet aus), `normalize_advantage`, `ent_coef`,
-`vf_coef`, `max_grad_norm`, `target_kl` (leer bedeutet aus), `use_sde`,
-`sde_sample_freq`, `log_std_init`, `ortho_init`.
+### 5.3 TD3
 
-Prüfregeln: `batch_size` muss `n_steps` teilen, sonst verwirft
-Stable-Baselines3 Daten und warnt erst zur Laufzeit; `total_timesteps` muss
-mindestens einen vollständigen Rollout zulassen.
-
-Quellen: [Schulman et al., PPO](https://arxiv.org/abs/1707.06347),
-[Schulman et al., GAE](https://arxiv.org/abs/1506.02438)
-
-### TD3
-
-Off-Policy-Verfahren mit deterministischem Actor. Es lernt zwei Critics und
-bildet das Ziel aus deren Minimum, um Überschätzung zu dämpfen. Auf die
-Target-Action kommt geclipptes Rauschen (Target Policy Smoothing); Actor und
-Target-Netze werden nur alle `policy_delay` Updates aktualisiert:
+Off-Policy mit deterministischem Actor, zwei Critics und Minimum als Ziel gegen
+Überschätzung. Geclipptes Rauschen auf die Target-Action; Actor und Target-Netze
+nur alle `policy_delay` Updates.
 
 ```text
 ã = clip(π_target(s') + clip(N(0, σ_t), -c, +c), a_min, a_max)
 y = r + γ·(1-done)·min( Q₁_target(s', ã), Q₂_target(s', ã) )
 ```
 
-Zusätzliche UI-Parameter: `buffer_size`, `learning_starts`, `tau`,
-`train_freq`, `gradient_steps`, `policy_delay`, `target_policy_noise`,
-`target_noise_clip`, Action-Noise-Typ `keins`, `normal` oder
-`Ornstein-Uhlenbeck` sowie dessen `σ`.
+- Zusätzliche UI-Parameter: `buffer_size`, `learning_starts`, `tau`,
+  `train_freq`, `gradient_steps`, `policy_delay`, `target_policy_noise`,
+  `target_noise_clip`, Action-Noise-Typ `keins` / `normal` /
+  `Ornstein-Uhlenbeck` samt `σ`.
+- Prüfregel: Mit deterministischem Actor exploriert TD3 ohne Action Noise gar
+  nicht. `keins` wird für TD3 mit verständlicher Meldung abgelehnt.
+- Quelle: [TD3](https://arxiv.org/abs/1802.09477)
 
-Prüfregel: Weil der Actor deterministisch ist, exploriert TD3 ohne explizites
-Action Noise überhaupt nicht. `keins` wird für TD3 mit einer verständlichen
-Meldung abgelehnt.
+### 5.4 SAC
 
-Quelle: [Fujimoto et al., TD3](https://arxiv.org/abs/1802.09477)
-
-### SAC
-
-Off-Policy-Verfahren mit stochastischem Actor. Es maximiert zusätzlich zur
-erwarteten Rendite die Entropie der Policy, gewichtet mit einer Temperatur `α`:
+Off-Policy mit stochastischem Actor; maximiert zusätzlich die Entropie,
+gewichtet mit Temperatur `α`. Bei `α = auto` wird sie gelernt, sodass die
+mittlere Entropie einer Zielentropie folgt; SB3-Standard
+`target_entropy = -dim(A)`.
 
 ```text
 y = r + γ·(1-done)·[ min(Q₁_target, Q₂_target) - α·log π(a'|s') ]
 ```
 
-Bei `α = auto` wird die Temperatur selbst gelernt, sodass die mittlere Entropie
-einer Zielentropie folgt; Stable-Baselines3 verwendet als Standard
-`target_entropy = -dim(A)`.
+- Zusätzliche UI-Parameter: `buffer_size`, `learning_starts`, `tau`,
+  `train_freq`, `gradient_steps`, `ent_coef` als `auto` oder fester Wert samt
+  Startwert von `α`, `target_entropy` als `auto` oder Zahl,
+  `target_update_interval`, `use_sde`, `sde_sample_freq`, `log_std_init`,
+  optionales Action Noise mit `σ`.
+- Quellen: [SAC](https://arxiv.org/abs/1801.01290),
+  [SAC mit gelernter Temperatur](https://arxiv.org/abs/1812.05905),
+  [gSDE](https://arxiv.org/abs/2005.05719)
 
-Zusätzliche UI-Parameter: `buffer_size`, `learning_starts`, `tau`,
-`train_freq`, `gradient_steps`, `ent_coef` als `auto` oder fester Wert samt
-Startwert von `α`, `target_entropy` als `auto` oder Zahl,
-`target_update_interval`, `use_sde`, `sde_sample_freq`, `log_std_init` sowie
-optionales Action Noise mit `σ`.
+### 5.5 Exploration
 
-Quellen: [Haarnoja et al., SAC](https://arxiv.org/abs/1801.01290),
-[Haarnoja et al., SAC mit gelernter Temperatur](https://arxiv.org/abs/1812.05905),
-[Raffin et al., gSDE](https://arxiv.org/abs/2005.05719)
+PPO, TD3 und SAC explorieren aus der Policy selbst oder aus Action Noise.
+Projekte mit ausschließlich diesen Verfahren haben **keine** ε-greedy-Parameter
+wie `exploration_fraction` oder `exploration_final_eps`.
 
-### Exploration
+### 5.6 Normalisierung
 
-PPO, TD3 und SAC explorieren aus der Policy selbst beziehungsweise aus
-explizitem Action Noise. Projekte, die ausschließlich diese Verfahren
-verwenden, besitzen deshalb **keine** ε-greedy-Parameter wie
-`exploration_fraction` oder `exploration_final_eps`.
+Verlangt ein Profil `normalize: true` oder sind die Observationswerte sehr
+unterschiedlich skaliert, erhält jeder Tab eine Gruppe `Normalisierung` mit
+`Beobachtungen normalisieren`, `Rewards normalisieren` und den Clip-Werten;
+umgesetzt mit `VecNormalize`.
 
-### Normalisierung
-
-Verlangt ein environmentspezifisches Profil `normalize: true` oder sind die
-Observationswerte sehr unterschiedlich skaliert, erhält jeder Verfahrenstab
-eine Gruppe `Normalisierung` mit `Beobachtungen normalisieren`,
-`Rewards normalisieren` sowie den zugehörigen Clip-Werten. Umgesetzt wird sie
-mit `VecNormalize` von Stable-Baselines3. Dabei gilt verbindlich:
-
-- Die laufenden Statistiken werden ausschließlich im Training fortgeschrieben.
-  Deterministische Evaluation und Animation verwenden dieselben Statistiken
-  eingefroren.
+- Laufende Statistiken wachsen **nur im Training**. Evaluation und Animation
+  nutzen sie eingefroren.
 - Graph, Summary und Evaluation zeigen immer den **unnormalisierten**
-  Episoden-Return, sonst wären Referenzlinien und Schwellen bedeutungslos.
-  Verwende dafür den `Monitor`-Wrapper innerhalb der Vektor-Environment
-  (`info["episode"]["r"]`) oder `VecNormalize.get_original_reward()`.
+  Episoden-Return – sonst wären Referenzlinien bedeutungslos. Quelle dafür:
+  `Monitor` innerhalb der Vektor-Environment (`info["episode"]["r"]`) oder
+  `VecNormalize.get_original_reward()`.
 - Die Animation erhält rohe Observationen aus dem Renderprozess und
   normalisiert sie vor `predict()` mit denselben eingefrorenen Statistiken.
-- Die Statistiken gehören zum Speicherstand und zum automatischen Checkpoint.
-  Ein ohne sie geladenes Modell verhält sich anders als das gespeicherte.
+- Die Statistiken gehören zum Speicherstand und zum Checkpoint.
+- Off-Policy-Verfahren normalisieren **nicht** per Voreinstellung: Der Replay
+  Buffer speichert Beobachtungen, deren Statistik sich weiter verschiebt.
+  Wählbar bleibt die Option.
 
-Off-Policy-Verfahren erhalten Normalisierung nicht als Voreinstellung: Ein
-Replay Buffer speichert Beobachtungen, deren Normalisierungsstatistik sich
-weiter verschiebt, sodass alte Einträge nicht mehr zur aktuellen Normierung
-passen. Wählbar bleibt die Option trotzdem.
+### 5.7 Gespeicherter Zustand
 
-### Gespeicherter Zustand
-
-- `PPO`: Policy, Value-Netz und Optimizer. Ein Replay Buffer existiert nicht.
-- `TD3`: Actor, beide Critics, Target-Netze, Optimizer und Replay Buffer.
-- `SAC`: wie TD3, zusätzlich der gelernte Temperaturparameter.
+- `PPO`: Policy, Value-Netz, Optimizer. Kein Replay Buffer.
+- `TD3`: Actor, beide Critics, Target-Netze, Optimizer, Replay Buffer.
+- `SAC`: wie TD3 plus gelernter Temperaturparameter.
 - Bei aktiver Normalisierung zusätzlich die `VecNormalize`-Statistiken.
 
-### Fairness von On-Policy gegen Off-Policy
+### 5.8 Fairness On-Policy gegen Off-Policy
 
-Ein Vergleich von PPO gegen TD3 oder SAC fällt bei gleichem Schrittbudget
-systematisch zugunsten der Off-Policy-Verfahren aus. Das gilt erst recht, wenn
-ein Vergleich mit drei oder vier Slots ein On-Policy-Verfahren gegen mehrere
-Off-Policy-Verfahren stellt: Diese lernen aus jedem gespeicherten Übergang
-mehrfach, PPO verwirft seine Daten nach jedem Update.
-Das ist kein Messfehler, sondern eine Eigenschaft der Verfahrensklassen.
+Bei gleichem Schrittbudget fällt ein Vergleich systematisch zugunsten der
+Off-Policy-Verfahren aus – sie lernen aus jedem Übergang mehrfach, PPO verwirft
+seine Daten nach jedem Update. Das gilt erst recht, wenn drei oder vier Slots
+ein On-Policy-Verfahren gegen mehrere Off-Policy-Verfahren stellen. Kein
+Messfehler, sondern eine Eigenschaft der Verfahrensklassen;
 Bedienungsanleitung und README sagen das ausdrücklich.
 
-### Verfahrensbezogene Tests
+### 5.9 Verfahrensbezogene Tests
 
-Für jedes eingesetzte Verfahren aus diesem Katalog wird zusätzlich geprüft:
-
-- Die Konstruktorargumente enthalten ausschließlich Schlüssel, die der
-  jeweilige Stable-Baselines3-Algorithmus kennt.
-- `PPO`: Wirkung von `clip_range`, `gae_lambda` und `n_epochs`; kein Replay
-  Buffer vorhanden; Fortsetzen des Trainings ohne Rücksetzen des
-  Schrittzählers.
+- Konstruktorargumente enthalten nur Schlüssel, die der jeweilige
+  SB3-Algorithmus kennt.
+- `PPO`: Wirkung von `clip_range`, `gae_lambda`, `n_epochs`; kein Replay
+  Buffer; Fortsetzen ohne Rücksetzen des Schrittzählers.
 - `TD3`: verzögerte Actor-Updates gemäß `policy_delay`, Clipping des
-  Target-Rauschens, Action Noise wirkt im Training und nicht in der
-  Evaluation.
-- `SAC`: automatische Entropieanpassung verändert `α`, die Zielentropie
-  entspricht bei `auto` genau `-dim(A)`.
-- Save-/Load-Roundtrip je Verfahren mit genau den Bestandteilen aus
-  `Gespeicherter Zustand`.
+  Target-Rauschens, Action Noise wirkt im Training und nicht in der Evaluation.
+- `SAC`: automatische Entropieanpassung verändert `α`; Zielentropie bei `auto`
+  genau `-dim(A)`.
+- Save-/Load-Roundtrip je Verfahren mit genau den Bestandteilen aus 5.7.
 - Ablehnung einer Modelldatei, deren Algorithmus nicht zum aktiven Slot passt.
 
-## GUI-Design
+## 6 Oberfläche
 
-- das Projekt verwendet ein konsistentes helles oder dunkles Farbschema; bei
-  Dark Mode besitzen Texte, Eingabewerte, deaktivierte Controls, Achsen,
-  Legenden und Statusmeldungen einen gut lesbaren Kontrast
-- Kopfbereich mit Titel, Untertitel und Status
-- Hauptbereich mit verschiebbarem horizontalem Splitter
-- obere und untere Hälfte sind anfangs gleich hoch und frei skalierbar
-- im oberen Bereich stehen das kompakt gruppierte Bedienpanel links und die
-  Environment-Visualisierung rechts nebeneinander
-- verwendet das Bedienpanel ein Drei-Spalten-Raster, enthalten die ersten
-  beiden Spalten ausschließlich die Verfahrenswahl mit ihren fachlich
-  gruppierten Parametern gemäß `Verfahrenswahl und Vergleichstabs`; die dritte
-  Spalte ist den Steuerungsbuttons vorbehalten
-- Steuerungsbuttons stehen in dieser dritten Spalte untereinander, nutzen die
-  volle Spaltenbreite und besitzen ausreichend große, einheitliche
-  Klickflächen
-- Eingabefelder und Auswahlfelder stehen innerhalb ihrer Parametergruppe
-  rechtsbündig. Ihre Breite orientiert sich am längsten erwartbaren regulären
-  Wert: so schmal wie sinnvoll, aber groß genug, dass typische Werte ohne
-  Abschneiden oder horizontales Scrollen lesbar sind
-- der untere Bereich nutzt die gesamte Fensterbreite für Diagramme, Vergleiche
-  und Summary
-- Diagramm beziehungsweise Vergleichsgraph und Summary sind im unteren Bereich
-  gleichzeitig nebeneinander sichtbar; die Summary liegt nicht in einem
-  separaten Tab und der Graph erhält den deutlich größeren Platzanteil
-- Diagramm und Summary können über klar bezeichnete Aktionen exportiert
-  werden. Der Graph wird mindestens als PNG in der aktuell dargestellten Form
-  gespeichert; die Summary wird als gut lesbare UTF-8-Textdatei exportiert.
-  Ein CSV-Export ist nicht erforderlich. Dateidialoge schlagen aussagekräftige
-  Dateinamen vor und überschreiben bestehende Dateien nicht unbemerkt. Die
-  Exportschaltflächen bekommen **keine** eigene Kopfzeile: Sie liegen kompakt
-  in einer ohnehin vorhandenen Leiste – etwa der Tableiste des Diagramms oder
-  der Titelzeile der Summary –, damit die gesamte übrige Höhe der Darstellung
-  gehört. Sie dürfen dabei weder Kurven noch Legende noch Text überdecken
-- Bedienpanel und Visualisierung erhalten feste beziehungsweise gewichtete
-  Platzanteile, sodass keines der beiden durch die Wunschgröße des anderen
-  verdrängt oder auf 1 × 1 Pixel reduziert wird
-- die Environment-Animation nutzt den gesamten verbleibenden Platz ihres
-  Bereichs. Frames werden unter Beibehaltung ihres Seitenverhältnisses auf die
-  größtmögliche vollständig sichtbare Größe skaliert; kein Teil des Frames darf
-  abgeschnitten werden
-- im unteren Bereich Tabs für sinnvolle Diagramme und Vergleiche
-- alle wesentlichen Parameter und Steuerungsbuttons sind bei der
-  Mindestfenstergröße gleichzeitig sichtbar; Scrollen ist nur ein Fallback für
-  kleinere Fenster, nicht das Standardlayout
-- stabile, lesbare Darstellung auf typischen Laptop-Auflösungen
+### 6.1 Aufbau
+
+- konsistentes helles oder dunkles Farbschema; bei Dark Mode gut lesbarer
+  Kontrast für Texte, Eingabewerte, deaktivierte Controls, Achsen, Legenden,
+  Statusmeldungen
+- Kopfbereich mit Titel, Untertitel, Status
+- Hauptbereich mit verschiebbarem horizontalem Splitter; beide Hälften anfangs
+  gleich hoch und frei skalierbar
+- oben links das kompakt gruppierte Bedienpanel, rechts die
+  Environment-Visualisierung
+- Bedienpanel als Drei-Spalten-Raster: Spalte 1 und 2 tragen ausschließlich die
+  Verfahrenswahl mit ihren Parametergruppen (6.2), Spalte 3 die
+  Steuerungsbuttons untereinander über die volle Spaltenbreite mit einheitlich
+  großen Klickflächen
+- Eingabe- und Auswahlfelder stehen in ihrer Gruppe rechtsbündig; Breite am
+  längsten erwartbaren regulären Wert orientiert – so schmal wie sinnvoll, aber
+  ohne Abschneiden
+- unten über die volle Fensterbreite: Tabs für Diagramme und Vergleiche,
+  daneben gleichzeitig sichtbar die Summary. Die Summary liegt **nicht** in
+  einem eigenen Tab; der Graph bekommt den deutlich größeren Anteil
+- Bedienpanel und Visualisierung erhalten feste bzw. gewichtete Platzanteile,
+  sodass keines das andere auf 1 × 1 Pixel drückt
+- die Animation nutzt den gesamten verbleibenden Platz; Frames werden unter
+  Beibehaltung des Seitenverhältnisses größtmöglich skaliert, nie beschnitten
+- alle wesentlichen Parameter und Buttons sind bei Mindestfenstergröße
+  gleichzeitig sichtbar; Scrollen ist Fallback, nicht Standardlayout
 - große Tabellen mit horizontaler und vertikaler Scrollbar
 
-Fenstergröße und initiale Splitterposition werden nicht blind festgelegt,
-sondern aus Bildschirmgröße, Mindestgröße der sichtbaren Controls und einem
-Mindestplatz für Visualisierung beziehungsweise Diagramm abgeleitet. Beim
-Programmstart darf kein wesentliches Widget abgeschnitten sein. Das Fenster
-darf den nutzbaren Bildschirmbereich nicht unnötig überschreiten.
+Fenstergröße und initiale Splitterposition werden aus Bildschirmgröße,
+Mindestgröße der Controls und Mindestplatz für Visualisierung und Diagramm
+abgeleitet, nicht blind gesetzt. Beim Start darf kein wesentliches Widget
+abgeschnitten sein, und das Fenster überschreitet den nutzbaren
+Bildschirmbereich nicht.
 
-Das Layout wird mit einem realen GUI-Smoke-Test geprüft. Dabei müssen
-Visualisierung, alle wesentlichen Buttons und der Diagrammbereich tatsächlich
-gemappt sein und innerhalb des sichtbaren Fensters liegen. Dies gilt auch für
-alle Eingabefelder, Auswahlfelder, Checkboxen und Fortschrittsanzeigen. Der Test
-läuft mit der vorgesehenen Startfenstergröße und initialen Splitterposition.
-Eine reine Konstruktion der Widgets reicht nicht als Layout-Test. Geprüft
-werden alle aktiven Verfahrenstabs, also auch die Eingabefelder der zunächst
-nicht sichtbaren Tabs nach dem Umschalten, und zwar bei der größten vom Projekt
-unterstützten Zahl von Verfahren. Zusätzlich wird das Animationsraster mit
-einer, zwei, drei und vier sichtbaren Anzeigen geprüft: Alle Bilder liegen
-vollständig im sichtbaren Fenster und keine Zelle wird auf eine unbrauchbare
-Größe zusammengedrückt.
+Controls spiegeln `Bereit`, `Läuft`, `Gestoppt`, `Abgeschlossen` oder `Fehler`.
+Inkompatible Aktionen werden gezielt deaktiviert und nach Erfolg, Abbruch oder
+Fehler wieder freigegeben.
 
-Controls spiegeln den Zustand `Bereit`, `Läuft`, `Gestoppt`, `Abgeschlossen`
-oder `Fehler` wider. Inkompatible Aktionen werden gezielt deaktiviert und nach
-Erfolg, Abbruch oder Fehler wieder freigegeben.
+Jede App besitzt eine `Bedienungsanleitung`: empfohlener Ablauf, Environment
+und Rewards, Methoden, Training gegenüber Evaluation, Bedeutung der Slots und
+ihrer Anzahl, Parameter, Ansichten, typische Ursachen ausbleibenden
+Lernerfolgs. Sie sagt außerdem, dass die Werte neben der Animation erst beim
+Überfahren erscheinen – sonst sucht man sie vergeblich unter dem Bild.
 
-Jede App besitzt eine `Bedienungsanleitung`. Sie erklärt kurz den empfohlenen
-Ablauf, Environment und Rewards, Methoden, Training gegenüber Evaluation, die
-Bedeutung der Verfahrensslots und ihrer Anzahl, Parameter, Ansichten und
-typische Ursachen ausbleibenden Lernerfolgs. Sie erklärt außerdem, dass die
-Werte neben der Animation erst beim Überfahren des Bildes erscheinen – sonst
-sucht der Benutzer sie vergeblich unter dem Bild.
+### 6.2 Verfahrenswahl und Vergleichstabs
 
-### Verfahrenswahl und Vergleichstabs
+Projekte mit mehreren Algorithmen bieten bis zu **vier** gleichrangige Slots:
+mehrere Algorithmen, mehrere Parametrisierungen desselben Algorithmus oder eine
+Mischung.
 
-Projekte mit mehreren Algorithmen bieten bis zu **vier** gleichrangige
-Verfahrensslots an. Damit lassen sich mehrere Algorithmen, mehrere
-Parametrisierungen desselben Algorithmus oder eine Mischung aus beidem in einem
-einzigen Lauf nebeneinanderstellen.
+- `Anzahl Verfahren` (Werte `2`, `3`, `4`) liegt global außerhalb der Tabs. Der
+  Prompt nennt Standardwert und Startbelegung.
+- Belegt die Startbelegung zwei Slots mit demselben Algorithmus, bekommt einer
+  einen abweichenden Startwert – sonst wären sie identisch und der Vergleich
+  zeigte nichts. Das gilt nur für die Startbelegung; später hinzugefügte Slots
+  starten mit den unveränderten Standardwerten ihres Algorithmus.
+- Über den Parameterspalten stehen die Dropdowns `Verfahren 1` bis
+  `Verfahren 4`; mehrere Slots dürfen denselben Algorithmus enthalten.
+- Darunter gleich aufgebaute Tabs `Verfahren 1` bis `Verfahren 4`, jeder mit
+  den vollständigen und unabhängigen Parametern seines Algorithmus samt Budget,
+  Seed und Netzwerkparametern. Parameter werden nicht geteilt.
+- Global bleiben nur Einstellungen, die für einen fairen Vergleich in allen
+  Läufen identisch sein müssen: `Anzahl Verfahren`, Intervall und Umfang der
+  Zwischenevaluation.
+- Nicht aktive Slots verschwinden vollständig – weder Dropdown noch Tab wird
+  erzeugt. Deaktivierte Karteileichen widersprechen der Regel aus Abschnitt 4.
 
-Wie viele Slots aktiv sind, legt das Auswahlfeld `Anzahl Verfahren` mit den
-Werten `2`, `3` und `4` fest. Es liegt global außerhalb der Tabs bei den
-übrigen gemeinsamen Einstellungen; der projektspezifische Prompt nennt seinen
-Standardwert.
+Beim Ändern von `Anzahl Verfahren`:
 
-Über den Parameterspalten stehen die Dropdowns `Verfahren 1` bis `Verfahren 4`,
-in denen jeweils einer der verfügbaren Algorithmen gewählt wird. Mehrere Slots
-dürfen denselben Algorithmus enthalten.
+- kleiner und ein wegfallender Slot hat Lernzustand oder Messdaten → GUI fragt
+  nach und verwirft erst nach Bestätigung
+- größer → neue Slots starten mit den Standardwerten ihres Algorithmus und ohne
+  Lernzustand
+- vorhandene Slots bleiben in beiden Fällen unberührt
+- war der aktive Slot ein wegfallender, wird `Verfahren 1` aktiv
+- während eines laufenden Laufs ist das Feld gesperrt
 
-Darunter liegen gleich aufgebaute Tabs `Verfahren 1` bis `Verfahren 4`. Jeder
-Tab enthält vollständig und unabhängig die Parameter des dort gewählten
-Algorithmus, einschließlich Trainingsbudget, Seed und Netzwerkparametern.
-Parameter werden nicht zwischen den Slots geteilt. Global außerhalb der Tabs
-bleiben nur Einstellungen, die für einen fairen Vergleich in allen Läufen
-identisch sein müssen, also `Anzahl Verfahren` sowie Intervall und Umfang der
-deterministischen Zwischenevaluation.
+Genau ein Slot ist das **aktive Verfahren**, bestimmt durch den gewählten Tab
+und über den Steuerungsbuttons unübersehbar angezeigt (`Aktiv: Verfahren 1 –
+PPO`). Alle Einzellauf-Aktionen wirken darauf. Läuft bereits ein Einzellauf,
+bleibt dessen Ziel fixiert; ein Tabwechsel ändert nur die angezeigten
+Parameter.
 
-Nicht aktive Slots verschwinden vollständig – weder ihr Dropdown noch ihr Tab
-wird erzeugt. Deaktivierte Karteileichen mitzuschleppen widerspricht der Regel
-für nicht unterstützte Parameter. Beim Ändern von `Anzahl Verfahren` gilt:
-
-- Wird die Zahl kleiner und besitzt ein wegfallender Slot bereits einen
-  Lernzustand oder Messdaten, fragt die GUI verständlich nach und verwirft ihn
-  erst nach Bestätigung.
-- Wird die Zahl größer, starten die neuen Slots mit den Standardwerten ihres
-  Algorithmus und ohne Lernzustand.
-- Die bereits vorhandenen Slots bleiben in beiden Fällen unberührt.
-- War der aktive Slot ein wegfallender, wird `Verfahren 1` aktiv.
-- Während eines laufenden Trainings oder Vergleichs ist das Feld gesperrt.
-
-Genau ein Slot ist das aktive Verfahren. Er ergibt sich aus dem gewählten Tab
-und wird über den Steuerungsbuttons unübersehbar angezeigt, zum Beispiel
-`Aktiv: Verfahren 1 – PPO`. Alle Einzellauf-Aktionen wirken auf dieses
-Verfahren. Läuft bereits ein Einzellauf, bleibt dessen Ziel fixiert: Ein
-Tabwechsel ändert dann nur die angezeigten Parameter, nicht den laufenden Lauf.
-
-Jeder Slot besitzt eine feste Farbe. Sie ist in Vergleichsgraph, Legende,
-Summary-Kopfzeile und Animationsbeschriftung durchgängig dieselbe, sodass sich
-eine Kurve ohne Nachschlagen ihrem Bild und ihrer Spalte zuordnen lässt:
+Jeder Slot besitzt eine feste Farbe, durchgängig in Vergleichsgraph, Legende,
+Summary-Kopfzeile und Animationsbeschriftung:
 
 | Slot | Farbe |
 | --- | --- |
@@ -498,12 +405,11 @@ eine Kurve ohne Nachschlagen ihrem Bild und ihrer Spalte zuordnen lässt:
 | `Verfahren 4` | Grün |
 
 Enthält ein Projekt nur einen Algorithmus, entfallen die Dropdowns; die Tabs
-bleiben und vergleichen mehrere Parametrisierungen desselben Verfahrens.
+bleiben und vergleichen Parametrisierungen.
 
-### Steuerungsbuttons
+### 6.3 Steuerungsbuttons
 
-Die dritte Spalte enthält, soweit im Projekt fachlich sinnvoll, diese
-Steuerungsbuttons in dieser Reihenfolge:
+In Spalte 3, soweit fachlich sinnvoll, in dieser Reihenfolge:
 
 1. `Training starten / fortsetzen`
 2. `Stoppen`
@@ -513,64 +419,61 @@ Steuerungsbuttons in dieser Reihenfolge:
 6. `Bestes Modell wiederherstellen`
 7. `Neues Modell`
 
-Die Buttons 1, 3, 4, 6 und 7 wirken auf das aktive Verfahren, Button 5 immer
-auf alle aktiven Slots. Buttons zum manuellen Speichern und Laden gibt es
-nicht: Der Lernzustand wird über den automatischen Checkpoint des besten
-Evaluationsergebnisses gesichert und mit Button 6 zurückgeholt.
+- 1, 3, 4, 6, 7 wirken auf das aktive Verfahren, 5 auf alle aktiven Slots.
+- Buttons zum manuellen Speichern und Laden gibt es nicht: Der Lernzustand wird
+  über den automatischen Checkpoint gesichert und mit Button 6 zurückgeholt.
+- Darunter folgen Animationssteuerung (7.1), Fortschrittsanzeige und
+  Statuszeile.
+- Beschriftungen benennen nur Bestandteile, die **jedes** Verfahren des
+  Projekts besitzt. Besitzt nur ein Teil einen Replay Buffer, taucht er in
+  keiner Beschriftung auf; was ein Button betrifft, erklären Statusmeldung,
+  Bedienungsanleitung und README.
 
-Darunter folgen die Animationssteuerung gemäß `Animation`, die
-Fortschrittsanzeige und die Statuszeile.
+### 6.4 Responsivität
 
-Buttonbeschriftungen benennen nur Bestandteile, die jedes Verfahren des
-Projekts tatsächlich besitzt. Besitzt beispielsweise nur ein Teil der Verfahren
-einen Replay Buffer, taucht er in keiner Beschriftung auf; welche Bestandteile
-ein Button tatsächlich betrifft, erklären Statusmeldung, Bedienungsanleitung
-und README.
+- Die GUI bleibt bei Training, Evaluation, Vergleich und Animation bedienbar.
+- Lange Arbeit läuft in kleinen `after()`-Schritten oder in Worker-Threads mit
+  Queue; Worker greifen nie direkt auf Tkinter-Widgets zu.
+- Plot- und Statusaktualisierungen werden auf eine sinnvolle Frequenz begrenzt.
+- Abbruch wird regelmäßig geprüft; beim Schließen werden Worker und Ressourcen
+  sauber beendet.
 
-## Responsivität
+## 7 Animation
 
-Die GUI bleibt bei Training, Evaluation, Vergleich und Animation bedienbar.
-Lange Arbeit läuft in kleinen `after()`-Schritten oder in Worker-Threads mit
-Queue; Worker greifen nie direkt auf Tkinter-Widgets zu. Plot- und
-Statusaktualisierungen werden auf eine sinnvolle Frequenz begrenzt.
+### 7.1 Steuerung und Inhalt
 
-Abbruch wird regelmäßig geprüft; beim Schließen werden Worker und Ressourcen
-sauber beendet.
+Global neben den Steuerungsbuttons, keinem Slot zugeordnet: genau **ein**
+Schalter und **ein** Eingabefeld.
 
-### Animation
-
-Global neben den Steuerungsbuttons und keinem Verfahrensslot zugeordnet
-besitzt die Animation genau **einen** Schalter und ein Eingabefeld:
-
-- `Animation zeigen` schaltet die Einzelbildanimation ein und aus – jederzeit,
-  auch mitten in einem laufenden Trainings- oder Vergleichslauf. Eingeschaltet
-  zeigt sie sowohl einzeln abgespielte Episoden als auch den laufenden Lauf.
-- `Bildrate (FPS)` legt die Abspielgeschwindigkeit fest. Standardwert ist die
-  environment-eigene Bildrate `env.metadata["render_fps"]`. Gültig sind ganze
-  Zahlen von 1 bis zu einer Obergrenze, die der projektspezifische Prompt
-  nennt; sie liegt nie unter der environment-eigenen Bildrate, sonst wäre der
-  Standardwert selbst ungültig. Sagt der Prompt nichts, gilt 1 bis 120. Die
-  Validierung nennt wie überall Feld, Wert und Bereich. Eine Änderung wirkt
+- `Animation zeigen` schaltet die Einzelbildanimation jederzeit ein und aus,
+  auch mitten in einem Lauf. Eingeschaltet zeigt sie einzeln abgespielte
+  Episoden ebenso wie den laufenden Lauf.
+- `Bildrate (FPS)`: Standard ist `env.metadata["render_fps"]`, gültig `1` bis
+  `250`. Die Obergrenze liegt bewusst über jeder üblichen Environment-Rate –
+  läge sie darunter, wäre der Standardwert selbst ungültig. Eine Änderung wirkt
   spätestens mit der nächsten sichtbaren Episode, auch während eines Laufs.
+  Dauert eine Episode bei der nativen Rate ungewöhnlich lange, nennt die
+  Bedienungsanleitung einen brauchbaren höheren Startwert.
 
-Während eines Trainings- oder Vergleichslaufs zeigt die Animation fortlaufend
-Episoden, die der **aktuelle Lernstand** im isolierten Renderprozess spielt.
-Die Trainingsschleife selbst rendert nicht: Sie liefe sonst im Takt der
-Darstellung und würde massiv ausgebremst.
+Gezeigt wird ausschließlich der offizielle, von `env.render()` gelieferte
+RGB-Frame. Keine eigene Grafik, kein separates Fenster; der Prompt nennt nur
+die Bildgröße.
 
-Damit lernendes Netz und Darstellung sich nicht in die Quere kommen, arbeitet
-die Animation auf einer **Kopie der Policy**, die zu Beginn jeder sichtbaren
-Episode gezogen wird. Sie greift nie aus dem GUI-Thread in das Netz, das ein
-Worker gerade trainiert. Jede sichtbare Episode zeigt damit den Lernstand zu
-ihrem Beginn, nicht den fortlaufend aktualisierten.
+Während eines Laufs zeigt die Animation fortlaufend Episoden des **aktuellen
+Lernstands** im isolierten Renderprozess. Die Trainingsschleife rendert nicht –
+sie liefe sonst im Takt der Darstellung. Die Animation arbeitet auf einer
+**Kopie der Policy**, gezogen zu Beginn jeder sichtbaren Episode, und greift
+nie aus dem GUI-Thread in das lernende Netz.
 
-Läuft ein Einzeltraining, zeigt die Animation dessen fixierten Slot. Läuft ein
-Vergleich, zeigt sie **alle aktiven Verfahren gleichzeitig**, jedes mit eigenem
-Bild und eigener Beschriftung. Außerhalb eines Laufs ist genau das Anzeigefeld
-des aktiven Verfahrens sichtbar.
+Die Animation kostet Rechenzeit und verlangsamt das Training spürbar; die
+eingestellte Bildrate ist eine Obergrenze. Bedienungsanleitung erwähnt beides,
+und der Lauf bleibt ohne Animation voll funktionsfähig.
 
-Die sichtbaren Anzeigefelder liegen in einem Raster mit höchstens zwei Spalten
-und höchstens zwei Zeilen:
+### 7.2 Raster
+
+Einzeltraining zeigt den fixierten Slot; ein Vergleich zeigt **alle aktiven
+Verfahren gleichzeitig**, jedes mit eigenem Bild und eigener Beschriftung.
+Außerhalb eines Laufs ist genau das Feld des aktiven Verfahrens sichtbar.
 
 | Sichtbare Anzeigen | Raster |
 | --- | --- |
@@ -579,303 +482,340 @@ und höchstens zwei Zeilen:
 | 3 | zwei in der ersten Zeile, eine in der zweiten |
 | 4 | zwei je Zeile und zwei je Spalte |
 
-Alle Rasterzellen sind gleich groß; Zeilen und Spalten erhalten dasselbe
-Gewicht, damit keine Zelle die übrigen verdrängt. Die Beschriftung unter dem
-Bild bekommt ihren Platz **vor** dem Bild zugeteilt: Ein Bild, das den
-verbleibenden Raum füllt, drückt sie sonst aus einer knappen Zelle heraus, ohne
-dass es auffällt. Der Layout-Test prüft die Beschriftung jeder sichtbaren
-Anzeige ausdrücklich mit. Die Größe der Einzelbilder
-leitet sich aus dem verfügbaren Platz und der Zahl der Anzeigen ab, nicht aus
-der Größe des zuletzt gezeigten Bildes – sonst behielte ein einmal großes Bild
-seinen Platz und verdrängte die übrigen Anzeigen. Die Zellen behalten ihre
-Position, während Episoden beginnen und enden; ein Slot, dessen Episode gerade
-zurückgesetzt wird, hinterlässt keine springende Lücke.
+- Höchstens zwei Spalten und zwei Zeilen; alle Zellen gleich groß, Zeilen und
+  Spalten gleich gewichtet.
+- Die Beschriftung unter dem Bild bekommt ihren Platz **vor** dem Bild
+  zugeteilt – ein Bild, das den Rest füllt, drückt sie sonst unbemerkt aus
+  einer knappen Zelle. Der Layout-Test prüft sie ausdrücklich mit.
+- Die Bildgröße leitet sich aus dem verfügbaren Platz und der Zahl der Anzeigen
+  ab, nicht aus dem zuletzt gezeigten Bild – sonst behielte ein einmal großes
+  Bild seinen Platz.
+- Zellen behalten ihre Position, während Episoden beginnen und enden.
 
-Je Anzeige kommt höchstens ein weiteres, **slotgebundenes** Bedienelement
-hinzu: die Wahl, welchen Lernstand diese Animation zeigt. Sie wirkt nur auf
-ihre eigene Anzeige, sodass sich mehrere Verfahren unabhängig voneinander
-beobachten lassen, und steht **über** oder neben dem Bild – nie darunter, weil
-dort ausschließlich die Beschriftung aus dem nächsten Abschnitt Platz hat.
-Welche Stände zur Wahl stehen, legt der projektspezifische Prompt fest.
+### 7.3 Welchen Lernstand eine Anzeige zeigt
 
-Gezeigt wird standardmäßig der **aktuelle** Lernstand, und die Beschriftung
-nennt dazu die Nummer der zuletzt trainierten beziehungsweise verglichenen
-Episode – dieselbe Nummer, die auf der X-Achse der Graphen steht. Ein eigener,
-bei jedem Einschalten wieder bei 1 beginnender Animationszähler ist unzulässig:
-Er ließe sich dem Diagramm nicht zuordnen.
+Je Anzeige höchstens ein weiteres, **slotgebundenes** Bedienelement: die Wahl
+des gezeigten Lernstands. Sie wirkt nur auf ihre eigene Anzeige und steht
+**über** oder neben dem Bild, nie darunter. Zur Wahl stehen genau zwei Stände:
 
-Soll sich ein früherer Lernstand erneut abspielen lassen, wird genau der dafür
-nötige Zustand gesichert und keiner mehr. Ein Verlauf über alle Episoden
-scheidet aus: Bei großen Schrittbudgets entstehen Tausende Episoden, deren
-Policy-Kopien Gigabytes belegten und das Training ausbremsten. Der Prompt nennt,
-welche Stände gesichert werden. Ein so gesicherter Stand wird mit **festem
-Seed** abgespielt, damit die Wiederholung jedes Mal gleich aussieht, und die
-Beschriftung macht erkennbar, dass gerade nicht der aktuelle Stand läuft.
+- `aktuell` (Standard): der laufende Lernstand. Die Beschriftung nennt die
+  Nummer der zuletzt trainierten bzw. verglichenen Episode – dieselbe Nummer
+  wie auf der X-Achse der Graphen. Ein eigener, bei jedem Einschalten wieder
+  bei 1 beginnender Animationszähler ist **unzulässig**.
+- `beste`: der Lernstand der bisher besten Episode, gemessen am explorativen
+  Return. Abgespielt mit **festem Seed**, damit die Wiederholung jedes Mal
+  gleich aussieht; die Beschriftung macht erkennbar, dass nicht der aktuelle
+  Stand läuft. Ist `beste` gewählt, aber noch keine Episode abgeschlossen,
+  läuft der aktuelle Stand weiter und die Statuszeile sagt das.
 
-#### Beschriftung und Messwerte
+Gesichert wird dafür je Slot **genau ein** zusätzlicher Lernstand. Ein Verlauf
+über alle Episoden scheidet aus: Bei großen Budgets entstehen Tausende
+Episoden, deren Policy-Kopien Gigabytes belegten. Der Stand entsteht im
+Worker-Thread unmittelbar nach dem Episodenende – nur dort gehört die Policy zu
+dieser Episode – als losgelöste Kopie, die der Optimizer nicht mehr verändert.
+Ein neues Modell verwirft ihn mit.
 
-Jede Anzeige trägt einen Titel, der Slot und Algorithmus nennt, etwa
+### 7.4 Beschriftung und Messwerte
+
+Jede Anzeige trägt einen Titel mit Slot und Algorithmus, etwa
 `Verfahren 3 – SAC`. Teilen sich mehrere Slots einen Algorithmus, ergänzt der
-Titel – genau wie die Legende des Vergleichsgraphen und mit demselben Wortlaut –
-den wichtigsten abweichenden Parameter, etwa
-`Verfahren 3 – SAC (Lernrate α 0.0003)`. Titel und Legende stammen aus
-derselben Quelle und laufen deshalb nie auseinander.
+Titel – mit demselben Wortlaut wie die Legende des Vergleichsgraphen – den
+wichtigsten abweichenden Parameter: `Verfahren 3 – SAC (Lernrate α 0.0003)`.
+Titel und Legende stammen aus derselben Quelle.
 
-Unter jedem Animationsbild steht dauerhaft eine kurze Zeile mit genau diesen
-drei Angaben und nichts sonst:
+Unter jedem Bild steht dauerhaft eine kurze Zeile mit genau diesen drei Angaben
+und nichts sonst: **Episode**, **Schritt** innerhalb der Episode, bisher
+kumulierter **Return**.
 
-- Episode
-- Schritt innerhalb der Episode
-- bisher kumulierter Return der laufenden Episode
+- Das Verfahren gehört in den Titel, nicht in diese Zeile – in einer schmalen
+  Zelle ist der Platz knapp, und der Titel steht ohnehin darüber.
+- Abkürzen ist erlaubt, etwa `E: 57 · S: 354/1000 · R: 2.700,0`.
+- Fester Aufbau und feste Höhe, damit die Bilder beim Weiterzählen nicht
+  springen.
+- Weitere Messwerte gehören nicht darunter: Bei vier Anzeigen bliebe sonst kein
+  Platz für die Bilder.
 
-Das Verfahren gehört nicht in diese Zeile, sondern in den Titel der Anzeige:
-In einer schmalen Rasterzelle ist der Platz knapp, und der Titel steht ohnehin
-unmittelbar darüber. Die Zeile darf abkürzen, etwa `E: 57 · S: 354/1000 ·
-R: 2.700,0`. Sie hat einen festen Aufbau und eine feste Höhe, damit die Bilder
-beim Weiterzählen nicht springen. Weitere Messwerte gehören nicht darunter: Bei
-vier Anzeigen bliebe sonst kein Platz mehr für die Bilder selbst.
+Alle übrigen Messwerte – insbesondere die Action, je nach Projekt die
+Observationswerte – erscheinen nur, solange der Mauszeiger über dem Bild steht,
+und werden **neben** dem Bild eingeblendet:
 
-Alle übrigen Messwerte – insbesondere die gewählte Action, dazu je nach Projekt
-die Observationswerte – erscheinen ausschließlich, solange der Mauszeiger über
-dem zugehörigen Animationsbild steht. Sie werden **neben** dem Bild
-eingeblendet, damit Bild und Werte gleichzeitig sichtbar bleiben. Verbindlich
-gilt:
+- Die Einblendung verdeckt ihr eigenes Bild nicht und schneidet es nicht ab.
+- Erscheinen und Verschwinden verändern Größe und Position der Bilder nicht:
+  Entweder ist der Platz dauerhaft reserviert, oder die Einblendung liegt als
+  Overlay über dem Nachbarbereich.
+- Sie gehört zu genau dem überfahrenen Bild und nennt dessen Slot; steht der
+  Zeiger über keinem Bild, ist keine Einblendung sichtbar.
+- Sie aktualisiert sich mit der Bildfrequenz und zeigt den gerade
+  dargestellten Frame, nicht einen älteren.
+- Gut lesbar: fester Zeichensatz, ausreichender Kontrast, feste Spaltenbreiten.
+- Ihren Inhalt legt der Projekt-Prompt fest.
 
-- Die Einblendung verdeckt ihr eigenes Bild nicht, weder ganz noch teilweise,
-  und schneidet es nicht ab.
-- Erscheinen und Verschwinden der Einblendung verändern Größe und Position der
-  Animationsbilder nicht. Entweder ist der Platz dauerhaft reserviert, oder die
-  Einblendung liegt als Overlay über dem Nachbarbereich, nie über dem eigenen
-  Bild.
-- Die Einblendung gehört zu genau dem Bild, über dem der Zeiger steht, und
-  nennt dessen Slot. Steht der Zeiger über keinem Bild, ist keine Einblendung
-  sichtbar.
-- Sie aktualisiert sich mit derselben Frequenz wie das Bild und zeigt die Werte
-  des gerade dargestellten Frames, nicht die eines älteren.
-- Sie ist gut lesbar: fester Zeichensatz, ausreichender Kontrast, feste
-  Spaltenbreiten, damit Zahlen beim Aktualisieren nicht wandern.
-- Welche Werte sie im Einzelnen enthält, legt der projektspezifische Prompt
-  fest.
+### 7.5 Renderprozesse
 
-Die Animation kostet Rechenzeit und verlangsamt das Training spürbar. Die
-eingestellte Bildrate ist dabei eine Obergrenze: Während eines Laufs
-konkurrieren Training und Rendern um Rechenzeit, sodass die tatsächliche Rate
-darunter liegen kann. Weise in der Bedienungsanleitung auf beides hin und halte
-den Lauf ohne Animation voll funktionsfähig.
+- Auf macOS dürfen Tkinter und ein nativer Grafikkontext – SDL-/Pygame-Fenster
+  ebenso wie OpenGL-Kontext – nicht im selben Prozess initialisiert werden,
+  wenn das zu nativen Abstürzen führen kann. Dann läuft ausschließlich das
+  Rendering in einem isolierten, unsichtbaren Prozess mit headless
+  Grafiktreiber; die GUI erhält nur RGB-Frames.
+- Jede sichtbare Anzeige erhält ihren **eigenen** Prozess mit eigener
+  Environment-Instanz; bei vier Anzeigen also vier Hilfsprozesse. Die
+  Bedienungsanleitung sagt, dass mehr Animationen den Lauf stärker ausbremsen.
+- Die Hilfsprozesse erzeugen weder ein eigenes Fenster noch einen zusätzlichen
+  Dock- oder Programmeintrag und werden beim Schließen beendet. Genügt der
+  naheliegende Treiber dem nicht, wird ein passender gewählt und die Wahl
+  begründet – ein Dock-Eintrag je Anzeige ist ein Fehler, kein hinnehmbarer
+  Nebeneffekt.
+- Für MuJoCo regelt 7.6 Treiber und Umgebungsvariable abschließend; bei anderen
+  Environment-Familien nennt sie der Projekt-Prompt.
 
-Auf macOS dürfen Tkinter und ein nativer Grafikkontext des Renderers – ein
-SDL-/Pygame-Fenster ebenso wie ein OpenGL-Kontext – nicht im selben Prozess
-initialisiert werden, wenn dies zu nativen Abstürzen führen kann. In diesem Fall
-läuft ausschließlich das Rendering in einem isolierten, unsichtbaren Prozess mit
-headless Grafiktreiber; die GUI erhält nur RGB-Frames. Der projektspezifische
-Prompt nennt den dafür nötigen Treiber und die Umgebungsvariable, die ihn
-auswählt. Die Hilfsprozesse erzeugen weder ein eigenes Fenster noch einen
-zusätzlichen Dock- oder Programmeintrag und werden beim Schließen beendet.
-Genügt der naheliegende Treiber dieser Bedingung nicht, wird ein passender
-gewählt und die Wahl begründet – ein Dock-Eintrag je Anzeige ist kein
-hinnehmbarer Nebeneffekt, sondern ein Fehler.
+### 7.6 MuJoCo-Environments
 
-Jede sichtbare Anzeige erhält ihren **eigenen** Renderprozess mit eigener
-Environment-Instanz; Environment-Instanzen werden auch hier nicht geteilt. Bei
-vier Anzeigen laufen also vier Hilfsprozesse. Das kostet spürbar Rechenzeit und
-Speicher: Die Bedienungsanleitung sagt, dass mehr gleichzeitige Animationen den
-Lauf stärker ausbremsen, und die Anwendung bleibt ohne Animation voll
-funktionsfähig.
+Gilt für alle MuJoCo-Projekte, damit es in keinem Prompt erneut steht:
 
-## Visualisierung und Vergleich
+- `MUJOCO_GL` wird gesetzt, **bevor** `mujoco` bzw. `gymnasium.envs.mujoco`
+  importiert wird: macOS `cgl`, headless Linux `egl`, ersatzweise `osmesa`.
+  Eine bereits gesetzte Variable bleibt unverändert.
+- `glfw` ist auf macOS **unzulässig**, obwohl es funktioniert und Gymnasiums
+  Standardliste es führt: `glfw.init()` meldet den Prozess beim Window Server
+  als Vordergrund-App an, sodass je Anzeige ein Programm- und Dock-Eintrag
+  entsteht. Nachprüfbar mit `lsappinfo list`.
+- Gymnasiums `MujocoRenderer` führt `cgl` nicht in seiner Backend-Tabelle,
+  obwohl MuJoCo den Kontext unter `mujoco.cgl` mitbringt. Der Renderprozess
+  ergänzt den Eintrag vor dem Erzeugen des Environments; die mitgelieferten
+  Backends bleiben unangetastet.
+- Schlägt der Import von `mujoco` oder der Grafikkontext fehl, meldet die
+  Anwendung das verständlich auf Deutsch mit Hinweis auf
+  `pip install "gymnasium[mujoco]"` und `MUJOCO_GL`, statt abzustürzen.
+  Training und Evaluation ohne Animation bleiben nutzbar.
 
-Zeige nur für Environment und Algorithmus sinnvolle Metriken, beispielsweise
+## 8 Diagramme und Summary
+
+### 8.1 Metrikwahl
+
+Zeige nur für Environment und Algorithmus sinnvolle Metriken, etwa
 Episode-Return, gleitenden Durchschnitt, Erfolgsrate, Episodenlänge,
 Exploration, Environment-Schritte und bei neuronalen Netzen den Loss.
 
-- Achsen, Einheiten und Methoden sind beschriftet. Die Achsenbeschriftung
-  bleibt dabei knapp; Wertungen wie „höher ist besser" und Schwellen gehören in
+Metriken, Anzeigen und Hilfetexte werden aus dem **aktuellen** Environment
+abgeleitet, nie aus einem Vorgängerprojekt übernommen. Diese Projekte ähneln
+einander stark, und genau daraus entstehen die hartnäckigsten Fehler: eine
+Sturzquote ohne terminalen Zustand, ein Clipping-Hinweis, wo nichts geclippt
+wird, ein Überlebensbonus, den es nicht gibt.
+
+- Jede Kennzahl muss sich aus den Regeln des aktuellen Environments begründen
+  lassen. Passt sie nicht, entfällt sie ersatzlos.
+- Eine im Environment **konstante** Kennzahl gehört nicht als Summary-Zeile,
+  sondern einmal in den Text und in einen Test.
+- Environmentkonstanten – Übersetzungen, Skalierungen, Grenzen, Bildraten –
+  werden aus dem Environment gelesen oder als Tabelle hinterlegt und gegen das
+  Environment getestet. Nichts wird geraten oder kopiert.
+
+### 8.2 Achsen, Legende, Linien
+
+- Achsen, Einheiten und Methoden sind beschriftet; die Achsenbeschriftung
+  bleibt knapp. Wertungen wie „höher ist besser" und Schwellen gehören in
   Legende, Summary und Hilfetexte, nicht an die Achse.
-- Über den Achsen steht keine zusätzliche Überschrift, wenn der Tab- oder
-  Gruppentitel bereits sagt, was zu sehen ist: Der Platz gehört den Kurven.
-- Wenn neben dem Plot ausreichend Breite vorhanden ist, liegt die Legende in
-  einem reservierten Bereich außerhalb der Achsen. Sie darf weder Datenlinien
-  verdecken noch am Rand der Figure abgeschnitten werden. Die Breite dieses
-  Bereichs wird aus der **tatsächlichen** Legendenbreite abgeleitet, nicht fest
-  gewählt: Sobald Labels den abweichenden Parameter mitführen, sprengen sie
-  jede feste Reserve.
-- Rohwerte und geglättete Werte sind unterscheidbar.
-- Training und Evaluation werden optisch getrennt.
-- Deterministische Evaluationsergebnisse werden in der Summary ausgewiesen und
-  müssen nicht zusätzlich im Trainingsgraphen dargestellt werden.
-- Längere Trainings- und Vergleichsläufe werden in einem sichtbaren,
-  konfigurierbaren Schrittintervall automatisch in einer separaten headless
-  Environment deterministisch evaluiert. Dies erzeugt keine Animation und
-  verändert weder Modell noch Replay Buffer. Der Graph und die Summary-Tabelle
-  werden mit dem Ergebnis live aktualisiert.
-- Der beste deterministische Evaluationswert eines Einzeltrainings wird je
-  Verfahrensslot getrennt gemerkt. Bei jeder Verbesserung wird der vollständige
-  Lernzustand des Slots konsistent als gemeinsamer Checkpoint gesichert, in der
-  Summary ausgewiesen und über einen klar beschrifteten Button
-  wiederherstellbar gemacht. Welche Bestandteile dazugehören, hängt vom
-  Verfahren ab: Bei Off-Policy-Verfahren gehört der Replay Buffer dazu, bei
-  On-Policy-Verfahren treten Policy-, Value- und Optimizerzustand an seine
-  Stelle. Wiederhergestellt wird der vollständige Lernzustand, nicht nur das
-  neuronale Netz.
-- Trainings- und Vergleichskurven verwenden einheitlich Episoden auf der
-  X-Achse. Das Trainingsbudget und die tatsächlich ausgeführten
-  Environment-Schritte bleiben separat in Status und Summary sichtbar.
-- Fehlende Daten werden nicht durch künstliche Nullwerte ersetzt.
-- Bei episodenbasierten Kurven entstehen Punkte nur für vollständig
-  abgeschlossene Episoden. Endet ein Trainingsbudget innerhalb einer Episode,
-  darf der letzte Kurvenpunkt deshalb vor dem tatsächlich ausgeführten
-  Schrittbudget liegen. GUI und Summary zeigen ausgeführte Schritte,
-  angefordertes Budget und diese Bedeutung getrennt und verständlich an.
-
-Der Vergleich stellt immer alle aktiven Verfahrensslots gegenüber. Ein
-gemeinsamer Vergleichsgraph ist verpflichtend; er zeigt alle Läufe mit
-derselben aussagekräftigen X-Achse und derselben Metrik. Legende und
-Beschriftung benennen Slot und Algorithmus, etwa `V1 – PPO` und `V2 – SAC`.
-Enthalten mehrere Slots denselben Algorithmus, nennt das Label zusätzlich den
-wichtigsten abweichenden Parameter. Bei mehreren Wiederholungen zeigt der
-Graph den Mittelwert und zusätzlich Standardabweichung oder
-95-%-Konfidenzintervall als Unsicherheitsband.
-
-Für die Linien gilt verbindlich:
-
-- Die Slots werden allein über die **Farbe** unterschieden, nicht über den
+- Über den Achsen steht keine Überschrift, wenn der Tab- oder Gruppentitel
+  bereits sagt, was zu sehen ist – der Platz gehört den Kurven.
+- Die Legende liegt bei ausreichender Breite in einem reservierten Bereich
+  außerhalb der Achsen, verdeckt keine Datenlinien und wird am Figure-Rand
+  nicht abgeschnitten. Die Breite dieses Bereichs wird aus der **tatsächlichen**
+  Legendenbreite abgeleitet, nicht fest gewählt: Labels mit abweichendem
+  Parameter sprengen jede feste Reserve.
+- Slots werden allein über die **Farbe** unterschieden (6.2), nicht über den
   Linienstil. Jede hervorgehobene Slotkurve ist **durchgezogen**; gestrichelte
   oder gepunktete Slotkurven sind unzulässig, weil sie bei vier Verfahren
-  schnell unlesbar werden.
-- Verwendet wird die Farbzuordnung aus `Verfahrenswahl und Vergleichstabs`:
-  Blau, Rot, Gelb, Grün. Die konkreten Farbwerte werden so gewählt, dass sich
-  die vier Kurven auf dem Hintergrund des Projekts deutlich voneinander und vom
-  Hintergrund abheben; auf einem dunklen Hintergrund also hinreichend helle,
-  kräftige Töne.
-- Referenz- und Schwellenlinien, etwa die Gelöst-Marke, sind **weiß und
-  gestrichelt**. Weiß ist keiner Slotfarbe zugeordnet und durchgezogen ist den
-  Slotkurven vorbehalten; damit lässt sich eine Referenzlinie weder in der
-  Farbe noch im Strich mit einer Datenlinie verwechseln.
-- Rohkurven verwenden dieselbe Slotfarbe mit deutlich verringerter Deckkraft
-  und geringerer Strichstärke, damit sie die hervorgehobene Kurve nicht
-  überdecken.
+  unlesbar werden. Die Farbwerte heben sich deutlich voneinander und vom
+  Hintergrund ab.
+- Referenz- und Schwellenlinien sind **weiß und gestrichelt** – weder in der
+  Farbe noch im Strich mit einer Datenlinie zu verwechseln.
+- Rohkurven nutzen dieselbe Slotfarbe mit deutlich verringerter Deckkraft und
+  Strichstärke; Rohwerte und geglättete Werte bleiben unterscheidbar.
+- Training und Evaluation werden optisch getrennt. Deterministische
+  Evaluationsergebnisse stehen in der Summary und müssen nicht zusätzlich im
+  Graphen erscheinen.
+- Lange Rohkurven werden nur für die Darstellung auf eine feste Punktzahl
+  verdichtet; die Messdaten bleiben vollständig. Min-/Max-Verdichtung ist
+  einfachem Auslassen vorzuziehen. Plot-Updates werden gedrosselt.
+- Fehlende Daten werden nicht durch künstliche Nullwerte ersetzt.
 
-Der Vergleichsgraph erscheint mit dem ersten verfügbaren Ergebnis und wird
-während aller Läufe in einem sinnvollen Intervall fortgeschrieben. Er darf
-nicht erst nach Abschluss des gesamten Vergleichs angezeigt oder aktualisiert
-werden. Alle aktiven Slots starten parallel; die Fortschrittsanzeige aggregiert
-ihre tatsächlich ausgeführten Schritte. Ein erneut gestarteter, kompatibel
-konfigurierter Vergleich setzt die Vergleichsmodelle nicht zurück, sondern
-setzt ihr Training fort und hängt neue Messpunkte an die vorhandenen Kurven an.
-Rohwerte werden dezent dargestellt; je Slot hebt eine kräftige Linie den
-gleitenden Durchschnitt der letzten 20 Episodenergebnisse hervor.
-Dasselbe gilt für den normalen
-Trainingsgraphen: aktuelle Episodenergebnisse werden während des Trainings
-sichtbar. Parallel dazu wird auch die Summary live aktualisiert; sie zeigt für
-Training und Vergleich konsistent Episoden, ausgeführte Environment-Schritte,
-aktuelle beziehungsweise gemittelte Rewards und Erfolgsrate.
+### 8.3 Gleitender Durchschnitt
 
-Die Vergleichs-Summary besitzt genau eine Ergebnisspalte je aktivem Slot,
-`Verfahren 1` bis `Verfahren 4`, mit dem jeweiligen Algorithmusnamen in der
-Kopfzeile. Sie enthält zusätzlich einen Abschnitt, der genau die Parameter
-auflistet, in denen sich die Konfigurationen unterscheiden – je Parameter eine
-Zeile mit dem Wert aller Slots. Ohne diesen Abschnitt ist ein Vergleich
-mehrerer Parametrisierungen desselben Algorithmus nicht interpretierbar.
-Unterscheiden sich die Trainingsbudgets der Slots, weist die GUI vor dem Start
-sichtbar darauf hin; unzulässig ist es nicht. Bei drei oder vier Spalten bleibt
-die Summary vollständig lesbar: Sie erhält bei Bedarf eine horizontale
-Scrollbar, statt Werte abzuschneiden.
+Je Slot hebt eine kräftige Linie den gleitenden Durchschnitt der
+Episodenergebnisse hervor. Seine Fensterbreite ist **einstellbar**:
 
-Lange Rohkurven werden nur für die Darstellung auf eine feste, angemessene
-Punktzahl verdichtet; die Messdaten selbst bleiben vollständig erhalten. Eine
-Min-/Max-Verdichtung ist einfachem Auslassen vorzuziehen, damit lokale Spitzen
-und Einbrüche sichtbar bleiben. Plot-Updates werden zeitlich gedrosselt.
+- Die Einstellung liegt am Diagramm selbst, nicht in den Verfahrenstabs – etwa
+  in derselben Leiste wie die Exportschaltfläche –, ist mit `Glättung`
+  beschriftet und benennt damit die Wirkung, nicht die Mechanik. Sie gilt
+  **global für alle Slots und beide Graphen**: Unterschiedlich stark geglättete
+  Kurven wären nicht vergleichbar.
+- Standard `20` Episoden, gültig `1` bis `500`. Bei `1` fällt die geglättete
+  Kurve mit den Rohwerten zusammen.
+- Eine Änderung wirkt **sofort**, auch mitten in einem Lauf, und ändert
+  ausschließlich die Darstellung: Messdaten bleiben vollständig, der Lauf wird
+  nicht berührt.
+- Eine ungültige Eingabe lässt die zuletzt gültige Breite stehen und wird in
+  der Statuszeile erklärt. Ein modaler Dialog ist hier unzulässig – er erschiene
+  bei jedem Tastendruck.
 
-Vergleiche verändern das sichtbare Experiment nicht. Alle Slots erhalten
-identische Environment-Konfigurationen und reproduzierbar abgeleitete Seeds.
-Trainingsbudget und Seed stammen aus dem jeweiligen Tab und sind bewusst frei
-wählbar, damit auch Budget- und Seed-Vergleiche möglich sind; das Budget wird
-bevorzugt in Environment-Schritten angegeben. Jeder Slot und jede Wiederholung
-startet mit neuem Lernzustand; die Evaluation erfolgt ohne Exploration und
-Lernupdates.
+### 8.4 X-Achse, Zwischenevaluation, Checkpoint
 
-Vor dem Start wird der Gesamtumfang angezeigt. Mehrere Wiederholungen werden
-mit Mittelwert und Standardabweichung oder 95-%-Konfidenzintervall aggregiert.
-Bei Abbruch bleiben vollständige Ergebnisse erhalten und unvollständige werden
-gekennzeichnet.
+- Trainings- und Vergleichskurven führen einheitlich **Episoden** auf der
+  X-Achse. Budget und tatsächlich ausgeführte Schritte bleiben separat in
+  Status und Summary sichtbar.
+- Punkte entstehen nur für vollständig abgeschlossene Episoden. Endet ein
+  Budget innerhalb einer Episode, liegt der letzte Punkt vor dem ausgeführten
+  Schrittbudget; GUI und Summary zeigen ausgeführte Schritte, angefordertes
+  Budget und diese Bedeutung getrennt und verständlich.
+- Längere Läufe werden in einem sichtbaren, konfigurierbaren Schrittintervall
+  automatisch in einer separaten headless Environment deterministisch
+  evaluiert. Das erzeugt keine Animation und verändert weder Modell noch Replay
+  Buffer; Graph und Summary werden live aktualisiert.
+- Der beste deterministische Evaluationswert wird je Slot getrennt gemerkt. Bei
+  jeder Verbesserung wird der **vollständige** Lernzustand des Slots konsistent
+  als gemeinsamer Checkpoint gesichert, in der Summary ausgewiesen und über
+  einen klar beschrifteten Button wiederherstellbar. Welche Bestandteile
+  dazugehören, hängt vom Verfahren ab (5.7); wiederhergestellt wird der
+  vollständige Lernzustand, nicht nur das Netz.
 
-## Tabellen und Modelle
+### 8.5 Vergleich
 
-Tabellen zeigen den aktuellen, vollständigen Lernstand, unterscheiden besuchte
-und unbesuchte Zustände und sind scrollbar.
+Der Vergleich stellt immer alle aktiven Slots gegenüber. Ein gemeinsamer
+Vergleichsgraph ist verpflichtend, mit derselben X-Achse und derselben Metrik
+für alle Läufe.
 
-Wenn Modelle gespeichert und geladen werden, enthalten sie Lernzustand,
-Format-Version und notwendige Metadaten. Zu den Metadaten gehören Algorithmus,
-vollständige Slot-Konfiguration und die Environment-Kennung samt aller
-abweichenden Konstruktorargumente. Methode und Environment werden beim Laden
-auf Kompatibilität geprüft. Fehlerhafte oder inkompatible Dateien dürfen
-den aktiven Zustand nicht verändern.
+- Legende und Beschriftung benennen Slot und Algorithmus (`V1 – PPO`). Teilen
+  sich mehrere Slots einen Algorithmus, nennt das Label zusätzlich den
+  wichtigsten abweichenden Parameter.
+- Der Graph erscheint mit dem ersten Ergebnis und wird während aller Läufe in
+  einem sinnvollen Intervall fortgeschrieben – nicht erst nach Abschluss.
+- Alle aktiven Slots starten parallel; die Fortschrittsanzeige aggregiert ihre
+  ausgeführten Schritte.
+- Ein erneut gestarteter, kompatibel konfigurierter Vergleich setzt die
+  Vergleichsmodelle nicht zurück, sondern setzt ihr Training fort und hängt
+  neue Messpunkte an.
+- Vergleiche verändern das sichtbare Experiment nicht. Alle Slots erhalten
+  identische Environment-Konfigurationen und reproduzierbar abgeleitete Seeds.
+  Budget und Seed stammen aus dem jeweiligen Tab und sind frei wählbar, damit
+  auch Budget- und Seed-Vergleiche möglich sind; das Budget wird bevorzugt in
+  Environment-Schritten angegeben.
+- Jeder Slot und jede Wiederholung startet mit neuem Lernzustand; Evaluation
+  ohne Exploration und Lernupdates.
+- Vor dem Start wird der Gesamtumfang angezeigt. Mehrere Wiederholungen werden
+  mit Mittelwert und Standardabweichung oder 95-%-Konfidenzintervall
+  aggregiert; der Graph zeigt sie als Unsicherheitsband. Bei Abbruch bleiben
+  vollständige Ergebnisse erhalten, unvollständige werden gekennzeichnet.
 
-Gespeichert wird genau der Zustand, den das jeweilige Verfahren besitzt. Ein
-Replay Buffer gehört dazu, wenn das Verfahren einen führt, und wird andernfalls
-nicht erwähnt oder durch leere Platzhalter ersetzt. Geladen wird immer in den
-aktiven Verfahrensslot; passt die Datei nicht zu dem dort gewählten
-Algorithmus, wird sie verständlich abgelehnt.
+### 8.6 Summary
 
-## Fehlerbehandlung und Performance
+- Sie wird live aktualisiert und zeigt für Training und Vergleich konsistent
+  Episoden, ausgeführte Environment-Schritte, aktuelle bzw. gemittelte Rewards
+  und Erfolgsrate.
+- Die Vergleichs-Summary besitzt genau eine Ergebnisspalte je aktivem Slot,
+  `Verfahren 1` bis `Verfahren 4`, mit dem Algorithmusnamen in der Kopfzeile.
+- Sie enthält einen Abschnitt mit genau den Parametern, in denen sich die
+  Konfigurationen unterscheiden – je Parameter eine Zeile mit dem Wert aller
+  Slots. Ohne ihn ist ein Vergleich mehrerer Parametrisierungen desselben
+  Algorithmus nicht interpretierbar.
+- Unterscheiden sich die Trainingsbudgets, weist die GUI vor dem Start sichtbar
+  darauf hin; unzulässig ist es nicht.
+- Bei drei oder vier Spalten bleibt sie vollständig lesbar: notfalls mit
+  horizontaler Scrollbar, statt Werte abzuschneiden.
 
-- erwartbare Eingabefehler erscheinen als deutsche Dialogmeldung
-- technische Fehler werden aufgefangen und verständlich gemeldet
-- Busy-Zustände werden auch nach Fehlern beendet
-- Ressourcen werden sauber freigegeben
-- bestehende Dateien werden nicht ohne Nachfrage überschrieben
+### 8.7 Export
 
-Zuerst entsteht eine korrekte, getestete Referenzimplementierung. Optimiert wird
-nur nach Messung eines repräsentativen Laufs; Tests und Lernergebnis werden
-danach erneut geprüft.
+- Diagramm und Summary werden über klar bezeichnete Aktionen exportiert: der
+  Graph mindestens als PNG in der dargestellten Form, die Summary als gut
+  lesbare UTF-8-Textdatei. CSV ist nicht erforderlich.
+- Dateidialoge schlagen aussagekräftige Namen vor und überschreiben bestehende
+  Dateien nicht unbemerkt.
+- Die Schaltflächen bekommen **keine** eigene Kopfzeile: Sie liegen kompakt in
+  einer ohnehin vorhandenen Leiste – etwa der Tableiste des Diagramms –, damit
+  die übrige Höhe der Darstellung gehört, und verdecken weder Kurven noch
+  Legende noch Text.
 
-## Tests und Abnahme
+### 8.8 Tabellen und Modelldateien
 
-Tests laufen nicht beim normalen App-Start. Sie prüfen mindestens:
+- Tabellen zeigen den vollständigen aktuellen Lernstand, unterscheiden besuchte
+  und unbesuchte Zustände und sind scrollbar.
+- Gespeicherte Modelle enthalten Lernzustand, Format-Version und Metadaten:
+  Algorithmus, vollständige Slot-Konfiguration, Environment-Kennung samt aller
+  abweichenden Konstruktorargumente.
+- Methode und Environment werden beim Laden auf Kompatibilität geprüft.
+  Fehlerhafte oder inkompatible Dateien verändern den aktiven Zustand nicht.
+- Gespeichert wird genau der Zustand, den das Verfahren besitzt (5.7). Ein
+  Replay Buffer wird andernfalls nicht erwähnt und nicht durch leere
+  Platzhalter ersetzt.
+- Geladen wird immer in den aktiven Slot; passt die Datei nicht zum dort
+  gewählten Algorithmus, wird sie verständlich abgelehnt.
 
-- Environment-Übergänge, Rewards, Termination und Truncation
-- Updateformeln, Action-Auswahl und Tie-Breaking jedes Algorithmus
-- Parametergrenzen, Reset-Verhalten und Ergebnisobjekte
+## 9 Qualität
+
+### 9.1 Fehlerbehandlung und Performance
+
+- erwartbare Eingabefehler als deutsche Dialogmeldung
+- technische Fehler abfangen und verständlich melden
+- Busy-Zustände auch nach Fehlern beenden
+- Ressourcen sauber freigeben
+- bestehende Dateien nicht ohne Nachfrage überschreiben
+- zuerst eine korrekte, getestete Referenzimplementierung; optimiert wird erst
+  nach Messung eines repräsentativen Laufs, danach werden Tests und
+  Lernergebnis erneut geprüft
+
+### 9.2 Tests
+
+Tests laufen nicht beim App-Start. Sie prüfen mindestens:
+
+- Environment-Übergänge, Rewards, Termination, Truncation
+- Updateformeln, Action-Auswahl, Tie-Breaking jedes Algorithmus
+- Parametergrenzen, Reset-Verhalten, Ergebnisobjekte
 - Trennung von Training und Evaluation
-- reproduzierbaren Lernfortschritt in einem kurzen Simulationsszenario
+- reproduzierbaren Lernfortschritt in einem kurzen Szenario
 - kurzen Trainings-, Evaluations- und Vergleichslauf
-- einen Vergleichslauf mit zweimal demselben Algorithmus und unterschiedlichen
-  Parametern: Beide Slots besitzen getrennte Lernzustände, Ergebnisse und
-  Kurven und beeinflussen sich nicht
-- einen Vergleichslauf über mehr als zwei Slots, mindestens über die vom
-  Projekt unterstützte Höchstzahl: Jeder Slot besitzt getrennte Lernzustände,
-  Ergebnisse und Kurven, die Summary erhält je Slot eine Spalte und die
-  Fortschrittsanzeige aggregiert alle Slots
-- das Verkleinern und Vergrößern von `Anzahl Verfahren`: wegfallende Slots
-  werden erst nach Bestätigung verworfen, neu hinzukommende starten mit den
-  Standardwerten ihres Algorithmus, bestehende Slots bleiben unverändert
-- die Farbzuordnung der Slots und den Linienstil des Vergleichsgraphen: je Slot
-  die vorgesehene Farbe, alle hervorgehobenen Slotkurven durchgezogen, die
-  Referenzlinie weiß und gestrichelt
-- die Beschriftung unter dem Animationsbild enthält genau Episode, Schritt,
-  Verfahren und Return; Action- und Observationswerte erscheinen dort nicht,
-  sondern nur in der Einblendung neben dem Bild
+- Vergleich mit zweimal demselben Algorithmus und unterschiedlichen Parametern:
+  getrennte Lernzustände, Ergebnisse und Kurven, keine gegenseitige
+  Beeinflussung
+- Vergleich über die vom Projekt unterstützte Höchstzahl an Slots: je Slot
+  getrennte Zustände und Kurven, je Slot eine Summary-Spalte, aggregierte
+  Fortschrittsanzeige
+- Verkleinern und Vergrößern von `Anzahl Verfahren`: Verwerfen erst nach
+  Bestätigung, neue Slots mit Standardwerten, bestehende unverändert
+- Farbzuordnung und Linienstil: je Slot die vorgesehene Farbe, hervorgehobene
+  Slotkurven durchgezogen, Referenzlinie weiß und gestrichelt
+- die Beschriftung unter dem Animationsbild enthält genau Episode, Schritt und
+  Return; Action- und Observationswerte erscheinen nur in der Einblendung
 - Import und Konstruktion der App-Komponenten
 
-Bei neuronalen Netzen werden zusätzlich Ein- und Ausgabeformen, Targets, Loss,
-Optimizer-Schritt, Target-Network-Update, Replay-Buffer sowie gegebenenfalls der
-Save-/Load-Roundtrip getestet. Ein GUI-Smoke-Test wird nur mit verfügbarem
-Display ausgeführt.
+Bei neuronalen Netzen zusätzlich: Ein- und Ausgabeformen, Targets, Loss,
+Optimizer-Schritt, Target-Network-Update, Replay Buffer und ggf.
+Save-/Load-Roundtrip.
+
+**GUI-Smoke-Test** (nur mit verfügbarem Display): Visualisierung, alle
+wesentlichen Buttons, der Diagrammbereich sowie alle Eingabe-, Auswahlfelder,
+Checkboxen und Fortschrittsanzeigen sind tatsächlich gemappt und liegen im
+sichtbaren Fenster. Der Test läuft mit vorgesehener Startfenstergröße und
+initialer Splitterposition; reine Widget-Konstruktion genügt nicht. Geprüft
+werden alle aktiven Verfahrenstabs – auch die zunächst nicht sichtbaren nach
+dem Umschalten – bei der größten unterstützten Zahl von Verfahren, sowie das
+Animationsraster mit einer, zwei, drei und vier Anzeigen: alle Bilder
+vollständig im Fenster, keine Zelle auf unbrauchbare Größe gedrückt.
+
+### 9.3 Abnahme
 
 Ein Projekt ist abgeschlossen, wenn alle projektspezifischen Verfahren korrekt
 implementiert sind, die GUI responsiv bleibt, Vergleiche fair und isoliert
 ablaufen, fachlicher Lernfortschritt getestet ist und alle Tests erfolgreich
 sind.
 
-## README
+### 9.4 README
 
-Die README enthält:
-
-- Ziel, Installation und Startbefehl
-- Environment, Actions und Rewards
+- Ziel, Installation, Startbefehl
+- Environment, Actions, Rewards
 - Methoden und wesentliche Formeln in verständlicher Sprache
-- Parameter, Standardwerte und Quellen
+- Parameter, Standardwerte, Quellen. Nennt das Projekt eine Gelöst-Schwelle,
+  nennt die README zusätzlich, welche Ergebnisse die verwendeten Profile laut
+  Referenzquelle tatsächlich erreichen – auch und gerade dann, wenn sie die
+  Schwelle verfehlen
 - Bedienablauf und Interpretation der Ansichten
-- Verfahrensslots, ihre Anzahl und die Vergleichslogik sowie Speichern und
-  Laden, sofern vorhanden
+- Verfahrensslots, ihre Anzahl, Vergleichslogik sowie Speichern und Laden
 - Testbefehl und bekannte Grenzen
