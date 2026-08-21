@@ -1,0 +1,12 @@
+gymnasium==1.2.3
+stable-baselines3==2.9.0
+torch>=2.3
+numpy
+matplotlib
+pillow
+# mujoco und imageio bilden zusammen das Gymnasium-Extra `gymnasium[mujoco]`.
+mujoco>=3.2
+imageio>=2.14.1
+# pycma: Referenzimplementierung von CMA-ES. Stable-Baselines3 kennt das
+# Verfahren nicht; eine Eigenimplementierung wäre laut Workbench unzulässig.
+cma>=4.0

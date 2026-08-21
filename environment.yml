@@ -23,3 +23,6 @@ dependencies:
       # bereits das Erzeugen von Hopper-v5.
       - mujoco>=3.2
       - imageio>=2.14.1
+      # pycma ist die Referenzimplementierung von CMA-ES und wird ab
+      # 15-walker2d gebraucht. Stable-Baselines3 kennt das Verfahren nicht.
+      - cma>=4.0

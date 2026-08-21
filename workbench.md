@@ -33,7 +33,9 @@ Alles andere – GUI, Bedienelemente, Farben, Linienstile, Beschriftungen,
 Export, Animationsraster, Rendering, Checkpoints, allgemeine Tests – steht
 **ausschließlich** hier und wird im Prompt nicht wiederholt, auch nicht
 zusammenfassend: Eine Kopie veraltet, sobald diese Datei sich ändert. Verweise
-genügen.
+genügen. Ein Verweis nennt **Nummer und Überschrift**, etwa
+`Workbench 5.9 (Fairness zwischen Verfahrensklassen)` – die Nummer ist bequem,
+die Überschrift bleibt auch nach einer Umstrukturierung eindeutig.
 
 ## 2 Projekt
 
@@ -152,6 +154,13 @@ Optimizer-Parameter, Batch-Größe, Initialisierung, Normalisierung,
 Regularisierung, Gradient Clipping, Target-Network-Update und Zahl der
 Gradientenschritte.
 
+Die Netzgröße darf sich zwischen den Verfahren unterscheiden, wenn die
+Mathematik des Verfahrens das erzwingt – etwa weil ein Optimierer über der Zahl
+der Parameter quadratisch oder kubisch skaliert und ein Netz mit
+Zehntausenden Gewichten schlicht nicht mehr rechenbar ist. Der Prompt nennt
+Grund und Größenordnung. Fairness bemisst sich nach dem Schrittbudget, nicht
+nach gleicher Architektur.
+
 Standardwerte stammen aus Fachliteratur, den SB3-Voreinstellungen oder einem
 environmentspezifischen Profil des RL Baselines3 Zoo; **Profile haben Vorrang**.
 Prompt und README nennen Quelle, Algorithmus und Version bzw. Profilstand.
@@ -165,16 +174,25 @@ UI-Parameter, Prüfregeln, Quellen. Der Prompt nennt nur **welche** Verfahren
 ein Projekt nutzt, ihre Profile und Abweichungen. Fehlt ein Verfahren hier,
 beschreibt der Prompt es vollständig selbst.
 
-Verwendet werden die SB3-Implementierungen unverändert. Eigene Arbeit liegt in
-Konfiguration, Runnern, Metriken, Vergleich, GUI und Tests – nicht in einer
-Neuimplementierung.
+Verwendet werden die SB3-Implementierungen unverändert. Kennt Stable-Baselines3
+ein Verfahren nicht, tritt an seine Stelle eine **etablierte
+Referenzbibliothek**; der Prompt nennt sie samt Version. Eine Eigen-
+implementierung des Optimierers ist auch dann unzulässig. Eigene Arbeit liegt
+in Konfiguration, Runnern, Metriken, Vergleich, GUI und Tests.
 
 ### 5.1 Gemeinsame Parameter
 
-In jedem Verfahrenstab: `total_timesteps`, `learning_rate` mit Verlauf
-`konstant` oder `linear fallend` (SB3 akzeptiert eine Callable-Schedule),
-`batch_size`, `gamma`, `seed`, Hidden Layers für Actor und Critic getrennt,
-Aktivierung, Optimizer samt `eps` und `weight_decay`.
+In jedem Verfahrenstab, **soweit das Verfahren den Parameter kennt**:
+`total_timesteps`, `learning_rate` mit Verlauf `konstant` oder `linear fallend`
+(SB3 akzeptiert eine Callable-Schedule), `batch_size`, `gamma`, `seed`, Hidden
+Layers, Aktivierung, Optimizer samt `eps` und `weight_decay`.
+
+Ausnahmslos in **jedem** Tab stehen nur `total_timesteps` und `seed`: Sie
+definieren Budget und Reproduzierbarkeit und existieren in jeder
+Verfahrensklasse. Alles andere folgt der Regel aus Abschnitt 4 – ein Parameter,
+den das gewählte Verfahren nicht besitzt, wird weggelassen und nicht als
+deaktiviertes Feld mitgeschleppt. Ein gradientenfreies Verfahren hat etwa weder
+`learning_rate` noch `batch_size` noch `gamma`.
 
 Global außerhalb der Tabs, weil alle Läufe dieselben Stützstellen brauchen:
 `Anzahl Verfahren` sowie Intervall und Episodenzahl der Zwischenevaluation.
@@ -254,18 +272,83 @@ y = r + γ·(1-done)·[ min(Q₁_target, Q₂_target) - α·log π(a'|s') ]
   [SAC mit gelernter Temperatur](https://arxiv.org/abs/1812.05905),
   [gSDE](https://arxiv.org/abs/2005.05719)
 
-### 5.5 Exploration
+### 5.5 CMA-ES
 
-PPO, TD3 und SAC explorieren aus der Policy selbst oder aus Action Noise.
-Projekte mit ausschließlich diesen Verfahren haben **keine** ε-greedy-Parameter
-wie `exploration_fraction` oder `exploration_final_eps`.
+Gradientenfreies, populationsbasiertes Verfahren aus der Familie der
+Evolutionsstrategien. Es optimiert **direkt die Policy-Gewichte**: Aus einer
+mehrdimensionalen Normalverteilung `N(m, σ²·C)` werden λ Kandidaten gezogen,
+jeder wird über ganze Episoden bewertet, und aus den nach Rendite sortierten
+Kandidaten werden Mittelwert `m`, Schrittweite `σ` und Kovarianz `C` neu
+geschätzt.
 
-### 5.6 Normalisierung
+```text
+xₖ ~ m + σ·N(0, C),  k = 1 … λ        Kandidaten einer Generation
+m ← Σ wᵢ · x_{i:λ}                    gewichteter Mittelwert der besten μ
+σ, C ← aus den erfolgreichen Schritten fortgeschrieben
+```
+
+Damit unterscheidet es sich in jeder Hinsicht von den SB3-Verfahren:
+
+- **Kein Gradient, kein Replay Buffer, kein Critic.** Es gibt keine
+  `learning_rate`, keine `batch_size` und kein `gamma` – optimiert wird die
+  **undiskontierte** Episodenrendite, also genau die Größe, die der Graph zeigt.
+- **Rangbasiert.** Nur die Reihenfolge der Kandidaten zählt, nicht der Abstand
+  ihrer Renditen. Jede monotone Umskalierung der Rendite ist wirkungslos – eine
+  Reward-Normalisierung ist deshalb nicht nur unnötig, sondern sinnlos.
+- **Episodenweise.** Ein Kandidat wird über vollständige Episoden bewertet;
+  Information einzelner Schritte wird nicht genutzt.
+- **Deterministische Policy.** Exploriert wird im Parameterraum, nicht über die
+  Action.
+
+Verbindlich gilt:
+
+- Verwendet wird eine etablierte Referenzimplementierung, üblicherweise `pycma`.
+  Der Optimierer wird nicht selbst geschrieben.
+- Die Policy ist deterministisch und bildet auf den Action-Space ab; bei
+  `Box(-1, 1)` bietet sich ein abschließendes `tanh` an.
+- Die Zahl der Policy-Parameter `n` ist der **entscheidende** Wert: CMA-ES führt
+  eine `n × n`-Kovarianzmatrix. Bei `n = 70.000` wären das über 40 GB und eine
+  Eigenzerlegung in `O(n³)`. Praktikabel ist die Vollmatrix bis in den unteren
+  vierstelligen Bereich; darüber nur die Diagonalvariante. Der Prompt nennt die
+  Netzgröße und die daraus folgende Parameterzahl (Abschnitt 4.1).
+- Ein Schrittbudget wird wie bei allen Verfahren in **Environment-Schritten**
+  gezählt, nicht in Generationen. Der Lauf endet, sobald das Budget erschöpft
+  ist, notfalls mitten in einer Generation.
+- Jede Kandidatenbewertung ist eine Episode und erzeugt einen Kurvenpunkt.
+- Die deterministische Evaluation verwendet den **Verteilungsmittelwert** `m`,
+  nicht einen gezogenen Kandidaten: Das ist hier das Gegenstück zu „ohne
+  Exploration".
+
+UI-Parameter: `total_timesteps`, `seed`, Hidden Layers und Aktivierung der
+Policy, `sigma0` (anfängliche Schrittweite), `popsize` λ (`auto` entspricht
+`4 + ⌊3·ln n⌋`), Episoden je Kandidat sowie ein Schalter für die
+Diagonalvariante. Beobachtungsnormalisierung nach 5.7, Reward-Normalisierung
+entfällt.
+
+Prüfregeln: `popsize` ≥ 2 und `sigma0` > 0; das Budget muss mindestens eine
+vollständige Generation zulassen, sonst entsteht kein einziger Update-Schritt.
+
+Quellen: [Hansen, CMA-ES Tutorial](https://arxiv.org/abs/1604.00772),
+[pycma](https://github.com/CMA-ES/pycma),
+[Salimans et al., ES als Alternative zu RL](https://arxiv.org/abs/1703.03864),
+[Rajeswaran et al., lineare Policies für MuJoCo](https://arxiv.org/abs/1703.02660)
+
+### 5.6 Exploration
+
+- PPO, TD3 und SAC explorieren aus der Policy selbst oder aus Action Noise.
+- Populationsbasierte Verfahren wie CMA-ES explorieren im **Parameterraum**:
+  Die Streuung der gezogenen Gewichtsvektoren ist ihre Exploration. Eine
+  Action-Noise- oder Entropieeinstellung gibt es dort nicht.
+- Projekte mit ausschließlich diesen Verfahren haben **keine**
+  ε-greedy-Parameter wie `exploration_fraction` oder `exploration_final_eps`.
+
+### 5.7 Normalisierung
 
 Verlangt ein Profil `normalize: true` oder sind die Observationswerte sehr
 unterschiedlich skaliert, erhält jeder Tab eine Gruppe `Normalisierung` mit
-`Beobachtungen normalisieren`, `Rewards normalisieren` und den Clip-Werten;
-umgesetzt mit `VecNormalize`.
+`Beobachtungen normalisieren`, `Rewards normalisieren` und den Clip-Werten; bei
+SB3-Verfahren umgesetzt mit `VecNormalize`, sonst mit einer gleichwertigen
+eigenen laufenden Statistik, für die dieselben Regeln gelten.
 
 - Laufende Statistiken wachsen **nur im Training**. Evaluation und Animation
   nutzen sie eingefroren.
@@ -279,24 +362,41 @@ umgesetzt mit `VecNormalize`.
 - Off-Policy-Verfahren normalisieren **nicht** per Voreinstellung: Der Replay
   Buffer speichert Beobachtungen, deren Statistik sich weiter verschiebt.
   Wählbar bleibt die Option.
+- Bei rangbasierten Verfahren wie CMA-ES entfällt `Rewards normalisieren`
+  ersatzlos: Sie werten nur die Reihenfolge der Renditen aus, jede monotone
+  Umskalierung ist wirkungslos. Ein solches Feld wäre eine Attrappe.
 
-### 5.7 Gespeicherter Zustand
+### 5.8 Gespeicherter Zustand
 
 - `PPO`: Policy, Value-Netz, Optimizer. Kein Replay Buffer.
 - `TD3`: Actor, beide Critics, Target-Netze, Optimizer, Replay Buffer.
 - `SAC`: wie TD3 plus gelernter Temperaturparameter.
-- Bei aktiver Normalisierung zusätzlich die `VecNormalize`-Statistiken.
+- `CMA-ES`: der vollständige Zustand der Suchverteilung – Mittelwert,
+  Schrittweite und Kovarianz –, dazu der beste bisher gefundene
+  Parametervektor. Ein Netz allein genügt nicht: Ohne die Verteilung ließe sich
+  das Training nicht fortsetzen.
+- Bei aktiver Normalisierung zusätzlich die Statistiken.
 
-### 5.8 Fairness On-Policy gegen Off-Policy
+### 5.9 Fairness zwischen Verfahrensklassen
 
-Bei gleichem Schrittbudget fällt ein Vergleich systematisch zugunsten der
-Off-Policy-Verfahren aus – sie lernen aus jedem Übergang mehrfach, PPO verwirft
-seine Daten nach jedem Update. Das gilt erst recht, wenn drei oder vier Slots
-ein On-Policy-Verfahren gegen mehrere Off-Policy-Verfahren stellen. Kein
-Messfehler, sondern eine Eigenschaft der Verfahrensklassen;
-Bedienungsanleitung und README sagen das ausdrücklich.
+Ein Vergleich bei gleichem Schrittbudget ist fair im Sinne des Budgets, nicht
+im Sinne gleicher Voraussetzungen. Das ist kein Messfehler, sondern eine
+Eigenschaft der Verfahrensklassen; Bedienungsanleitung und README sagen das
+ausdrücklich:
 
-### 5.9 Verfahrensbezogene Tests
+- **Off-Policy gegen On-Policy:** SAC und TD3 lernen aus jedem gespeicherten
+  Übergang mehrfach, PPO verwirft seine Daten nach jedem Update. Der Vergleich
+  fällt systematisch zugunsten der Off-Policy-Verfahren aus – erst recht, wenn
+  mehrere Slots sie gegen ein einzelnes On-Policy-Verfahren stellen.
+- **Gradientenfrei gegen gradientenbasiert:** Ein Verfahren wie CMA-ES nutzt je
+  Episode genau eine Zahl – die Rendite – und verwirft alles, was zwischen den
+  Schritten passiert ist. Die gradientenbasierten Verfahren werten jeden
+  einzelnen Übergang aus. Bei gleichem Schrittbudget liegt CMA-ES deshalb
+  typischerweise deutlich zurück; das sagt nichts über die Qualität des
+  Verfahrens, sondern über die Informationsmenge je Schritt. Dafür braucht es
+  keine Differenzierbarkeit, keinen Critic und keine Diskontierung.
+
+### 5.10 Verfahrensbezogene Tests
 
 - Konstruktorargumente enthalten nur Schlüssel, die der jeweilige
   SB3-Algorithmus kennt.
@@ -306,7 +406,14 @@ Bedienungsanleitung und README sagen das ausdrücklich.
   Target-Rauschens, Action Noise wirkt im Training und nicht in der Evaluation.
 - `SAC`: automatische Entropieanpassung verändert `α`; Zielentropie bei `auto`
   genau `-dim(A)`.
-- Save-/Load-Roundtrip je Verfahren mit genau den Bestandteilen aus 5.7.
+- `CMA-ES`: die Zahl der Policy-Parameter entspricht der Netzarchitektur; eine
+  Generation zieht `popsize` Kandidaten und verändert danach Mittelwert und
+  Schrittweite; die deterministische Evaluation nutzt den Verteilungsmittelwert
+  und nicht einen gezogenen Kandidaten; das Schrittbudget wird in
+  Environment-Schritten eingehalten, auch wenn es mitten in einer Generation
+  endet; ein Save-/Load-Zyklus setzt das Training mit derselben Verteilung
+  fort.
+- Save-/Load-Roundtrip je Verfahren mit genau den Bestandteilen aus 5.8.
 - Ablehnung einer Modelldatei, deren Algorithmus nicht zum aktiven Slot passt.
 
 ## 6 Oberfläche
@@ -609,6 +716,10 @@ wird, ein Überlebensbonus, den es nicht gibt.
 - Environmentkonstanten – Übersetzungen, Skalierungen, Grenzen, Bildraten –
   werden aus dem Environment gelesen oder als Tabelle hinterlegt und gegen das
   Environment getestet. Nichts wird geraten oder kopiert.
+- Führt das Environment **keinen** `reward_threshold`, gibt es auch keine
+  offizielle Gelöst-Schwelle. Der Prompt darf dann eine begründete
+  Referenzmarke setzen, muss sie aber als projektintern kennzeichnen und darf
+  sie nicht „gelöst" nennen. Erfundene offizielle Schwellen sind unzulässig.
 
 ### 8.2 Achsen, Legende, Linien
 
@@ -675,7 +786,7 @@ Episodenergebnisse hervor. Seine Fensterbreite ist **einstellbar**:
   jeder Verbesserung wird der **vollständige** Lernzustand des Slots konsistent
   als gemeinsamer Checkpoint gesichert, in der Summary ausgewiesen und über
   einen klar beschrifteten Button wiederherstellbar. Welche Bestandteile
-  dazugehören, hängt vom Verfahren ab (5.7); wiederhergestellt wird der
+  dazugehören, hängt vom Verfahren ab (5.8); wiederhergestellt wird der
   vollständige Lernzustand, nicht nur das Netz.
 
 ### 8.5 Vergleich
@@ -743,7 +854,7 @@ für alle Läufe.
   abweichenden Konstruktorargumente.
 - Methode und Environment werden beim Laden auf Kompatibilität geprüft.
   Fehlerhafte oder inkompatible Dateien verändern den aktiven Zustand nicht.
-- Gespeichert wird genau der Zustand, den das Verfahren besitzt (5.7). Ein
+- Gespeichert wird genau der Zustand, den das Verfahren besitzt (5.8). Ein
   Replay Buffer wird andernfalls nicht erwähnt und nicht durch leere
   Platzhalter ersetzt.
 - Geladen wird immer in den aktiven Slot; passt die Datei nicht zum dort
