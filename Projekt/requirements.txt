@@ -1,0 +1,11 @@
+gymnasium==1.2.3
+stable-baselines3==2.9.0
+torch>=2.3
+numpy
+matplotlib
+pillow
+# mujoco und imageio bilden zusammen das Gymnasium-Extra `gymnasium[mujoco]`.
+# imageio wird von gymnasium.envs.mujoco.mujoco_rendering importiert; ohne es
+# scheitert bereits das Erzeugen von Humanoid-v5.
+mujoco>=3.2
+imageio>=2.14.1

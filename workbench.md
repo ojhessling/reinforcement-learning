@@ -77,6 +77,12 @@ tests/
 
 ### 2.3 Architektur
 
+Die Anwendung zerfällt sichtbar in einen **Konfigurator** – das Bedienpanel mit
+Verfahrenswahl, Parametern und globalen Einstellungen (6.1, 6.2) – und einen
+**ausführenden Teil**: Runner für Training, Evaluation und Vergleich samt
+Animation, Diagramm und Summary. Beide teilen sich ein Fenster, aber keine
+Zuständigkeiten.
+
 - **Environment**: Spaces, Übergänge, Rewards, Reset, Seed, `terminated`,
   `truncated`, ggf. Rendering. Keine GUI- und keine Lernlogik.
 - **Agenten**: je Algorithmus eine Klasse mit einheitlicher Schnittstelle für
@@ -183,19 +189,19 @@ in Konfiguration, Runnern, Metriken, Vergleich, GUI und Tests.
 ### 5.1 Gemeinsame Parameter
 
 In jedem Verfahrenstab, **soweit das Verfahren den Parameter kennt**:
-`total_timesteps`, `learning_rate` mit Verlauf `konstant` oder `linear fallend`
+`total_timesteps`, `learning_rate` mit konstantem oder linear fallendem Verlauf
 (SB3 akzeptiert eine Callable-Schedule), `batch_size`, `gamma`, `seed`, Hidden
 Layers, Aktivierung, Optimizer samt `eps` und `weight_decay`.
 
-Ausnahmslos in **jedem** Tab stehen nur `total_timesteps` und `seed`: Sie
-definieren Budget und Reproduzierbarkeit und existieren in jeder
+Ausnahmslos in **jedem** Tab stehen nur `total_timesteps`, `Episoden` und
+`seed`: Sie definieren Budget und Reproduzierbarkeit und existieren in jeder
 Verfahrensklasse. Alles andere folgt der Regel aus Abschnitt 4 – ein Parameter,
 den das gewählte Verfahren nicht besitzt, wird weggelassen und nicht als
 deaktiviertes Feld mitgeschleppt. Ein gradientenfreies Verfahren hat etwa weder
 `learning_rate` noch `batch_size` noch `gamma`.
 
-Global außerhalb der Tabs, weil alle Läufe dieselben Stützstellen brauchen:
-`Anzahl Verfahren` sowie Intervall und Episodenzahl der Zwischenevaluation.
+Global außerhalb der Tabs, weil sie für alle Läufe gleich gelten müssen:
+`Anzahl Verfahren` und die Fensterbreite des gleitenden Durchschnitts (8.3).
 
 Nicht in die UI: `verbose`, `tensorboard_log`, `device`, `policy`-Kennung,
 `_init_setup_model`.
@@ -209,9 +215,37 @@ Standardwerte:
   kleineren Wert und sagt, was verloren geht.
 - Der Prompt nennt in jedem Fall die zu erwartende **Laufzeit**, damit niemand
   versehentlich einen Mehrstundenlauf startet.
-- Das Evaluationsintervall beträgt rund ein Zehntel des Schrittbudgets – etwa
-  zehn Stützstellen je Standardlauf.
-- Der Prompt nennt beide Zahlen ausdrücklich.
+- `Episoden` steht standardmäßig auf `1000`.
+- Beide Standardwerte müssen **zueinander passen**. Liegt der eine um
+  Größenordnungen über dem anderen, greift immer dieselbe Grenze und die andere
+  ist reine Dekoration. Der Prompt rechnet vor, welcher Schrittzahl die
+  Episodenvorgabe im konkreten Environment ungefähr entspricht, und wählt den
+  Schritt-Standard in derselben Größenordnung. Das Budget der eigentlichen
+  Messläufe darf davon abweichen und wird gesondert genannt.
+
+**Zwei Budgetgrenzen.** Jeder Slot führt `total_timesteps` **und** `Episoden`.
+
+- Der Lauf endet, **was zuerst eintritt**. Status und Summary nennen beide
+  Grenzen und weisen aus, **welche** den Lauf tatsächlich beendet hat.
+- Beide Grenzen gelten **relativ zum bereits Gelaufenen**. Ein erneut
+  gestarteter Lauf setzt nichts zurück, sondern hängt erneut das **volle**
+  Budget an; Kurve und Summary wachsen weiter. Bei Schritten erledigt das
+  Stable-Baselines3 selbst, sofern `reset_num_timesteps=False` gesetzt ist; die
+  Episodengrenze muss ausdrücklich um die bereits gelaufenen Episoden
+  verschoben werden – sonst wäre sie beim zweiten Start sofort überschritten
+  und der Lauf endete nach einer einzigen Episode.
+- `Episoden = 0` bedeutet unbegrenzt; dann greift allein das Schrittbudget.
+- Für den **Vergleich** mehrerer Verfahren ist das Schrittbudget die faire
+  Grenze. Eine Episodengrenze bevorzugt systematisch das Verfahren, das besser
+  lernt: Überall dort, wo Scheitern eine Episode vorzeitig beendet, werden
+  Episoden mit dem Lernfortschritt länger, und der bessere Agent sammelt bei
+  gleicher Episodenzahl mehr Environment-Schritte – also mehr Trainingsdaten.
+  Sein Vorsprung im Diagramm wäre dann teilweise nur ein Vorsprung an
+  Erfahrung. Der Prompt sagt ausdrücklich, welche Grenze die Messläufe steuert.
+- Wie stark die beiden Grenzen auseinanderfallen, hängt am Environment: Der
+  Prompt nennt die mittlere Episodenlänge einer untrainierten Policy und
+  rechnet vor, welcher Schrittzahl die Episodenvorgabe im besten und im
+  schlechtesten Fall entspricht.
 
 ### 5.2 PPO
 
@@ -435,6 +469,12 @@ ausdrücklich:
 - Eingabe- und Auswahlfelder stehen in ihrer Gruppe rechtsbündig; Breite am
   längsten erwartbaren regulären Wert orientiert – so schmal wie sinnvoll, aber
   ohne Abschneiden
+- Untereinanderstehende Wertefelder sind **exakt gleich breit**, unabhängig vom
+  Widgettyp. Eine Zeichenbreite allein genügt dafür nicht: Ein Auswahlfeld
+  rechnet seinen Aufklapp-Pfeil zusätzlich und bliebe immer einen Tick breiter
+  als ein Eingabefeld daneben. Die Breite gibt deshalb das Raster vor – feste
+  Mindestbreite und gemeinsame Uniform-Gruppe für die Wertespalten, Felder
+  dehnen sich darin
 - unten über die volle Fensterbreite: Tabs für Diagramme und Vergleiche,
   daneben gleichzeitig sichtbar die Summary. Die Summary liegt **nicht** in
   einem eigenen Tab; der Graph bekommt den deutlich größeren Anteil
@@ -456,6 +496,14 @@ Controls spiegeln `Bereit`, `Läuft`, `Gestoppt`, `Abgeschlossen` oder `Fehler`.
 Inkompatible Aktionen werden gezielt deaktiviert und nach Erfolg, Abbruch oder
 Fehler wieder freigegeben.
 
+Die Anleitung steht in einem **eigenen, scrollbaren Fenster**, nicht in einem
+Meldungsdialog. Ein Dialog wächst mit seinem Text, bis die Schaltfläche unter
+den Bildschirmrand rutscht – dann lässt er sich nicht mehr schließen. Das
+Fenster leitet seine Größe aus dem Inhalt ab, begrenzt sie am Bildschirm,
+scrollt und schließt auf **Escape** ebenso wie über seine Schaltfläche. Die
+Breite wird an der **längsten Zeile selbst** gemessen; Zeichenzahl mal
+Zeichenbreite geht daneben, sobald die Darstellung nicht exakt gleich breit ist.
+
 Jede App besitzt eine `Bedienungsanleitung`: empfohlener Ablauf, Environment
 und Rewards, Methoden, Training gegenüber Evaluation, Bedeutung der Slots und
 ihrer Anzahl, Parameter, Ansichten, typische Ursachen ausbleibenden
@@ -474,14 +522,28 @@ Mischung.
   einen abweichenden Startwert – sonst wären sie identisch und der Vergleich
   zeigte nichts. Das gilt nur für die Startbelegung; später hinzugefügte Slots
   starten mit den unveränderten Standardwerten ihres Algorithmus.
-- Über den Parameterspalten stehen die Dropdowns `Verfahren 1` bis
-  `Verfahren 4`; mehrere Slots dürfen denselben Algorithmus enthalten.
+- Über den Parameterspalten steht ein Block mit den globalen Einstellungen und
+  darunter die Belegung der Slots: `Verfahren 1` bis `Verfahren 4`, jeweils mit
+  ihrem Algorithmus und der Wahl der Animation (7.3) daneben. Mehrere Slots
+  dürfen denselben Algorithmus enthalten. Die Reihenfolge folgt der Wirkung:
+  Erst die Regeln, die für alle gelten, dann die Belegung, die sie ausfüllt.
+- Auswahlfelder werden nicht breiter gemacht als nötig. Ein Dropdown mit den
+  Werten `PPO`, `TD3`, `SAC` braucht keine zehn Zeichen.
+- Eine Auswahl aus wenigen benachbarten Zahlen ist ein **Zahlenfeld mit
+  Pfeilen**, keine Aufklappliste: Die Pfeile führen direkt zum Nachbarwert,
+  eine Liste mit drei Einträgen lohnt den Klick nicht.
+- Auswahlwerte werden **kurz** gehalten. Ein Wert, der nur in ein breiteres Feld
+  passt, zwingt dieses Feld aus der Flucht aller übrigen – die Bezeichnung wird
+  dann gekürzt und in Bedienungsanleitung und README erklärt, statt das Layout
+  danach zu richten.
+- Jede Spalte aus gleichartigen Bedienelementen trägt eine **Überschrift**.
+  Ohne sie ist bei einer Spalte aus Auswahlfeldern nicht erkennbar, worauf sich
+  ihre Werte beziehen.
 - Darunter gleich aufgebaute Tabs `Verfahren 1` bis `Verfahren 4`, jeder mit
   den vollständigen und unabhängigen Parametern seines Algorithmus samt Budget,
   Seed und Netzwerkparametern. Parameter werden nicht geteilt.
-- Global bleiben nur Einstellungen, die für einen fairen Vergleich in allen
-  Läufen identisch sein müssen: `Anzahl Verfahren`, Intervall und Umfang der
-  Zwischenevaluation.
+- Global bleiben nur Einstellungen, die in allen Läufen identisch sein müssen:
+  `Anzahl Verfahren` und die Fensterbreite des gleitenden Durchschnitts.
 - Nicht aktive Slots verschwinden vollständig – weder Dropdown noch Tab wird
   erzeugt. Deaktivierte Karteileichen widersprechen der Regel aus Abschnitt 4.
 
@@ -516,21 +578,28 @@ bleiben und vergleichen Parametrisierungen.
 
 ### 6.3 Steuerungsbuttons
 
-In Spalte 3, soweit fachlich sinnvoll, in dieser Reihenfolge:
+In Spalte 3, in dieser Reihenfolge:
 
 1. `Training starten / fortsetzen`
-2. `Stoppen`
-3. `Deterministisch evaluieren`
-4. `Sichtbare Episode abspielen`
-5. `Vergleich starten / fortsetzen`
-6. `Bestes Modell wiederherstellen`
-7. `Neues Modell`
+2. `Vergleich starten / fortsetzen`
+3. `Stoppen`
+4. `Zurücksetzen`
 
-- 1, 3, 4, 6, 7 wirken auf das aktive Verfahren, 5 auf alle aktiven Slots.
-- Buttons zum manuellen Speichern und Laden gibt es nicht: Der Lernzustand wird
-  über den automatischen Checkpoint gesichert und mit Button 6 zurückgeholt.
+- 1 und 4 wirken auf das aktive Verfahren, 2 auf alle aktiven Slots.
+- Mehr braucht der Ablauf nicht. Jede weitere Schaltfläche kostet Platz in der
+  schmalsten Spalte und muss sich rechtfertigen: Die Animation läuft während
+  der Läufe ohnehin mit und wird über 7.1 und 7.3 gesteuert, nicht über einen
+  eigenen Knopf.
+- Buttons zum manuellen Speichern und Laden gibt es nicht.
 - Darunter folgen Animationssteuerung (7.1), Fortschrittsanzeige und
   Statuszeile.
+- Während eines Laufs gehört die Statuszeile dem **Lauf**: Sie nennt die
+  beteiligten Verfahren und ihr Budget. Meldungen der Animation überschreiben
+  sie nicht – sie erscheinen nur, wenn gerade nichts läuft. Sonst wäre die
+  Information, auf die es ankommt, nach dem ersten Einzelbild verschwunden. Die Fortschrittsanzeige zählt in **Episoden**: Das ist die
+  Größe, die der Benutzer vorgibt und im Graphen wiederfindet. Nur wenn die
+  Episodengrenze auf unbegrenzt steht, fehlt der Nenner; dann zählt sie
+  ersatzweise Schritte.
 - Beschriftungen benennen nur Bestandteile, die **jedes** Verfahren des
   Projekts besitzt. Besitzt nur ein Teil einen Replay Buffer, taucht er in
   keiner Beschriftung auf; was ein Button betrifft, erklären Statusmeldung,
@@ -549,18 +618,26 @@ In Spalte 3, soweit fachlich sinnvoll, in dieser Reihenfolge:
 
 ### 7.1 Steuerung und Inhalt
 
-Global neben den Steuerungsbuttons, keinem Slot zugeordnet: genau **ein**
-Schalter und **ein** Eingabefeld.
+Global, keinem Slot zugeordnet, genügt **ein** Eingabefeld für die Bildrate.
 
-- `Animation zeigen` schaltet die Einzelbildanimation jederzeit ein und aus,
-  auch mitten in einem Lauf. Eingeschaltet zeigt sie einzeln abgespielte
-  Episoden ebenso wie den laufenden Lauf.
-- `Bildrate (FPS)`: Standard ist `env.metadata["render_fps"]`, gültig `1` bis
-  `250`. Die Obergrenze liegt bewusst über jeder üblichen Environment-Rate –
-  läge sie darunter, wäre der Standardwert selbst ungültig. Eine Änderung wirkt
+Einen zusätzlichen globalen Schalter „Animation zeigen" gibt es **nicht**,
+sobald die Wahl je Anzeige (7.3) einen Zustand `inaktiv` kennt: Alle Anzeigen
+darauf zu stellen ist dasselbe, und zwei Bedienelemente für dieselbe Sache
+können einander nur widersprechen. Beim Start steht jede Anzeige auf ihrem
+Standardwert und ist damit sichtbar – die Animation ist der sichtbare Zweck der
+Anwendung und wird abgeschaltet, wenn Rechenzeit wichtiger wird, nicht
+umgekehrt.
+- `Bildrate (FPS)`: gültig `1` bis `250`. Die Obergrenze liegt bewusst über
+  jeder üblichen Environment-Rate – läge sie darunter, wäre ein
+  environment-eigener Standardwert selbst ungültig. Eine Änderung wirkt
   spätestens mit der nächsten sichtbaren Episode, auch während eines Laufs.
-  Dauert eine Episode bei der nativen Rate ungewöhnlich lange, nennt die
-  Bedienungsanleitung einen brauchbaren höheren Startwert.
+- Der **Standardwert** ist eine Anzeigeentscheidung, keine Umgebungskonstante.
+  Die environment-eigene Rate gibt Echtzeit wieder; das ist nicht immer das
+  Ziel. Bei schnellen oder kurzlebigen Environments ist eine deutlich
+  niedrigere Rate vorzuziehen: Sie zeigt das Geschehen in Zeitlupe und kostet
+  zugleich weniger Rechenzeit, die dem Training zugutekommt. Der Prompt nennt
+  den gewählten Wert und begründet ihn, wenn er von der Environment-Rate
+  abweicht.
 
 Gezeigt wird ausschließlich der offizielle, von `env.render()` gelieferte
 RGB-Frame. Keine eigene Grafik, kein separates Fenster; der Prompt nennt nur
@@ -589,8 +666,19 @@ Außerhalb eines Laufs ist genau das Feld des aktiven Verfahrens sichtbar.
 | 3 | zwei in der ersten Zeile, eine in der zweiten |
 | 4 | zwei je Zeile und zwei je Spalte |
 
-- Höchstens zwei Spalten und zwei Zeilen; alle Zellen gleich groß, Zeilen und
-  Spalten gleich gewichtet.
+- Die **Spaltenzahl folgt der Fläche**, sie ist nicht fest. Gewählt wird die
+  Aufteilung, die das größte Bild ergibt. Eine feste Aufteilung verschenkt
+  Platz, sobald der Bereich nicht zufällig dasselbe Seitenverhältnis hat wie
+  das Raster: Quadratische Frames sind in einem breiten, flachen Bereich durch
+  die **Höhe** begrenzt – mehr Breite bringt dann nichts, eine zusätzliche
+  Zeile kostet dagegen sofort. Drei Anzeigen nebeneinander sind dort deutlich
+  größer als zwei über zwei.
+- In die Rechnung geht ein, was je Zelle **neben** dem Bild Platz braucht. Diese
+  Höhe fällt je Zeile an und macht Zeilen teurer als Spalten.
+- Alle belegten Zellen sind **gleich groß**, Zeilen und Spalten gleich
+  gewichtet. Die letzte Anzeige über eine freie Nachbarzelle zu spannen ist
+  verlockend, bringt bei quadratischen Frames aber nichts – der Gewinn wäre
+  null, der Verlust an Gleichmäßigkeit sichtbar.
 - Die Beschriftung unter dem Bild bekommt ihren Platz **vor** dem Bild
   zugeteilt – ein Bild, das den Rest füllt, drückt sie sonst unbemerkt aus
   einer knappen Zelle. Der Layout-Test prüft sie ausdrücklich mit.
@@ -601,26 +689,86 @@ Außerhalb eines Laufs ist genau das Feld des aktiven Verfahrens sichtbar.
 
 ### 7.3 Welchen Lernstand eine Anzeige zeigt
 
-Je Anzeige höchstens ein weiteres, **slotgebundenes** Bedienelement: die Wahl
-des gezeigten Lernstands. Sie wirkt nur auf ihre eigene Anzeige und steht
-**über** oder neben dem Bild, nie darunter. Zur Wahl stehen genau zwei Stände:
+Je Slot ein Bedienelement für den gezeigten Lernstand. Es gehört **zur
+Verfahrenszeile im Konfigurator**, nicht an das Bild: Dort steht es neben dem
+Verfahren, zu dem es gehört, es bleibt auch dann erreichbar, wenn die Anzeige
+gerade ausgeblendet ist, und unter dem Bild bleibt ausschließlich die eine
+Messwertzeile (7.4). Jede Zelle gewinnt dadurch Höhe fürs Bild. Zur Wahl
+stehen vier Möglichkeiten:
 
-- `aktuell` (Standard): der laufende Lernstand. Die Beschriftung nennt die
+- der **laufende Lernstand** (Standard). Die Beschriftung nennt die
   Nummer der zuletzt trainierten bzw. verglichenen Episode – dieselbe Nummer
   wie auf der X-Achse der Graphen. Ein eigener, bei jedem Einschalten wieder
   bei 1 beginnender Animationszähler ist **unzulässig**.
-- `beste`: der Lernstand der bisher besten Episode, gemessen am explorativen
-  Return. Abgespielt mit **festem Seed**, damit die Wiederholung jedes Mal
-  gleich aussieht; die Beschriftung macht erkennbar, dass nicht der aktuelle
-  Stand läuft. Ist `beste` gewählt, aber noch keine Episode abgeschlossen,
-  läuft der aktuelle Stand weiter und die Statuszeile sagt das.
+- die **beste Episode**, gemessen am explorativen Return, **exakt
+  nachgespielt** statt mit der Policy nachgerechnet – siehe unten.
+- der **Lernstand** dieser Episode, deterministisch und mit festem Seed. Er
+  beantwortet die andere Frage: nicht „was ist damals passiert", sondern „wie
+  gut ist dieser Stand ohne das Glück explorativer Züge". Beide Werte
+  nebeneinander sind aussagekräftig – ihr Abstand misst, wie viel des
+  Spitzenwerts Zufall war.
+
+  Beide Beschriftungen machen erkennbar, dass nicht der aktuelle Stand läuft.
+  Ist eine von beiden gewählt, aber noch keine Episode abgeschlossen, läuft der
+  aktuelle Stand weiter und die Statuszeile sagt das.
+- `inaktiv`: Diese eine Anzeige entfällt; die übrigen rücken nach und bekommen
+  ihren Platz. Bei drei oder vier gleichzeitig sichtbaren Verfahren kostet jede
+  laufende Anzeige Rechenzeit und einen eigenen Renderprozess – wer nur eines
+  beobachten will, schaltet die übrigen einzeln ab und sieht das verbleibende
+  entsprechend größer. Die übrigen Anzeigen laufen unberührt weiter; ein
+  Anhalten, das alle Slots trifft, gibt es nicht mehr. Stehen alle auf
+  `inaktiv`, bleibt der Anzeigebereich leer.
 
 Gesichert wird dafür je Slot **genau ein** zusätzlicher Lernstand. Ein Verlauf
 über alle Episoden scheidet aus: Bei großen Budgets entstehen Tausende
-Episoden, deren Policy-Kopien Gigabytes belegten. Der Stand entsteht im
-Worker-Thread unmittelbar nach dem Episodenende – nur dort gehört die Policy zu
-dieser Episode – als losgelöste Kopie, die der Optimizer nicht mehr verändert.
-Ein neues Modell verwirft ihn mit.
+Episoden, deren Policy-Kopien Gigabytes belegten.
+
+**Gesichert wird der Stand vom Episoden*beginn*, nicht vom Episodenende.** Das
+ist der springende Punkt und leicht falsch zu machen: Off-Policy-Verfahren
+aktualisieren die Policy bei `train_freq = 1` nach **jedem** Schritt. Am Ende
+einer Episode ist sie eine andere als die, die diese Episode erzeugt hat –
+gemessen rund 2 % Gewichtsänderung je Episode, was den deterministischen Return
+spürbar verschiebt. Wer am Episodenende sichert, zeigt unter der Nummer der
+besten Episode einen Lernstand, den es damals noch gar nicht gab.
+
+- Praktisch heißt das: zu Beginn jeder Episode in einen **vorab angelegten**
+  Puffer kopieren und ihn erst übernehmen, wenn die Episode die beste ist. Je
+  Episode neu zu allokieren kostete bei großen Netzen Megabytes.
+- Normalisiert das Projekt die Beobachtungen, gehören deren **Statistiken zum
+  Snapshot**. Eine alte Policy mit heutigen Statistiken sähe die Beobachtungen
+  anders als im Training.
+- Auch damit reproduziert die Wiederholung den Trainings-Return **nicht** exakt:
+  Die Episode lief explorativ, die Wiederholung läuft deterministisch und von
+  einem anderen Startzustand. Bedienungsanleitung und README sagen das.
+
+Der Stand entsteht im Worker-Thread als losgelöste Kopie, die der Optimizer
+nicht mehr verändert. Ein neues Modell verwirft ihn mit.
+
+**Die beste Episode wird aufgezeichnet, nicht nachgerechnet.** Die Policy
+wiederherzustellen genügt nicht: Die beste Episode ist das Maximum über
+Hunderte Episoden und verdankt ihren Wert zum Teil glücklichen
+Explorationszügen und ihrem Startzustand. Eine deterministische Wiederholung
+derselben Policy erreicht gemessen nur 80 bis 90 % ihres Returns – sie
+beantwortet die Frage „wie gut ist diese Policy", nicht „was ist damals
+passiert". Wer unter der Nummer der besten Episode einen deutlich kleineren
+Return zeigt, hat aus Sicht des Benutzers einen Fehler.
+
+Aufgezeichnet werden deshalb je Episode:
+
+- der **Simulatorzustand am Anfang** – ohne ihn läuft dieselbe Folge von
+  Actions in eine andere Episode;
+- **jede ausgeführte Action**, und zwar die, die tatsächlich an das Environment
+  ging, nicht die aus der Policy nachgerechnete.
+
+Beides wandert beim neuen Bestwert in vorab angelegte Puffer, wie der
+Lernstand. Der Platzbedarf ist gering: Ein Budget von 1000 Schritten und einer
+zweistelligen Zahl Actionwerte bleibt deutlich unter 100 kB je Episode.
+
+Die Wiedergabe setzt den Zustand und spielt die Actions ab. Sie reproduziert
+Bewegung und Return **exakt** – jedes Mal. Dafür greift der Renderprozess auf
+`unwrapped` des Environments zu; für **Messwerte** bleibt das unzulässig (3.1),
+fürs Nachspielen gibt es keinen anderen Weg, und die Abweichung wird im Prompt
+benannt.
 
 ### 7.4 Beschriftung und Messwerte
 
@@ -740,14 +888,26 @@ wird, ein Überlebensbonus, den es nicht gibt.
   Hintergrund ab.
 - Referenz- und Schwellenlinien sind **weiß und gestrichelt** – weder in der
   Farbe noch im Strich mit einer Datenlinie zu verwechseln.
+- Die Y-Achse folgt den **Daten**, nicht der Referenzlinie. Liegt die Marke weit
+  über dem erreichten Bereich – der Normalfall, wenn das Budget unter dem
+  Profilwert liegt –, wird sie **nicht** in den sichtbaren Bereich erzwungen:
+  Sonst drängt eine einzelne gestrichelte Linie alle Kurven in einen Bruchteil
+  der Bildhöhe und macht genau die Unterschiede unlesbar, um die es geht. Die
+  Marke erscheint dann nicht im Bild, sondern als Wert in Legende und Summary,
+  zusammen mit dem Abstand zum besten erreichten Return.
 - Rohkurven nutzen dieselbe Slotfarbe mit deutlich verringerter Deckkraft und
   Strichstärke; Rohwerte und geglättete Werte bleiben unterscheidbar.
-- Training und Evaluation werden optisch getrennt. Deterministische
-  Evaluationsergebnisse stehen in der Summary und müssen nicht zusätzlich im
-  Graphen erscheinen.
-- Lange Rohkurven werden nur für die Darstellung auf eine feste Punktzahl
-  verdichtet; die Messdaten bleiben vollständig. Min-/Max-Verdichtung ist
-  einfachem Auslassen vorzuziehen. Plot-Updates werden gedrosselt.
+- **Jede** gezeichnete Kurve ist auf eine feste Punktzahl gedeckelt – die
+  geglättete ebenso wie die rohe. Ohne diese Grenze wächst die Zeichenzeit
+  linear mit der Episodenzahl; bei mehreren Slots und zehntausenden Episoden
+  wird die Oberfläche unbenutzbar. Die Messdaten bleiben vollständig, nur die
+  Darstellung wird verdichtet.
+  - Für **Rohkurven** ist Min-/Max-Verdichtung einfachem Auslassen vorzuziehen:
+    Sie erhält Ausreißer, auf die es gerade ankommt.
+  - Für die **geglättete** Kurve gilt das Gegenteil: Min/Max machte eine
+    bewusst glatte Linie wieder zackig. Hier wird gleichmäßig ausgedünnt, der
+    letzte Punkt bleibt erhalten.
+- Plot-Updates werden gedrosselt.
 - Fehlende Daten werden nicht durch künstliche Nullwerte ersetzt.
 
 ### 8.3 Gleitender Durchschnitt
@@ -769,7 +929,7 @@ Episodenergebnisse hervor. Seine Fensterbreite ist **einstellbar**:
   der Statuszeile erklärt. Ein modaler Dialog ist hier unzulässig – er erschiene
   bei jedem Tastendruck.
 
-### 8.4 X-Achse, Zwischenevaluation, Checkpoint
+### 8.4 X-Achse und abgeschlossene Episoden
 
 - Trainings- und Vergleichskurven führen einheitlich **Episoden** auf der
   X-Achse. Budget und tatsächlich ausgeführte Schritte bleiben separat in
@@ -778,16 +938,17 @@ Episodenergebnisse hervor. Seine Fensterbreite ist **einstellbar**:
   Budget innerhalb einer Episode, liegt der letzte Punkt vor dem ausgeführten
   Schrittbudget; GUI und Summary zeigen ausgeführte Schritte, angefordertes
   Budget und diese Bedeutung getrennt und verständlich.
-- Längere Läufe werden in einem sichtbaren, konfigurierbaren Schrittintervall
-  automatisch in einer separaten headless Environment deterministisch
-  evaluiert. Das erzeugt keine Animation und verändert weder Modell noch Replay
-  Buffer; Graph und Summary werden live aktualisiert.
-- Der beste deterministische Evaluationswert wird je Slot getrennt gemerkt. Bei
-  jeder Verbesserung wird der **vollständige** Lernzustand des Slots konsistent
-  als gemeinsamer Checkpoint gesichert, in der Summary ausgewiesen und über
-  einen klar beschrifteten Button wiederherstellbar. Welche Bestandteile
-  dazugehören, hängt vom Verfahren ab (5.8); wiederhergestellt wird der
-  vollständige Lernzustand, nicht nur das Netz.
+- Eine automatische **Zwischenevaluation** ist nicht erforderlich. Sie kostet
+  Rechenzeit, erzeugt eine zweite Stützstellenreihe neben der eigentlichen
+  Lernkurve und beantwortet dieselbe Frage wie ein Mittelwert über die letzten
+  Episoden (8.6) – nur teurer. Wo eine explorationsfreie Messung gebraucht
+  wird, bleibt sie als Funktion des Logikmoduls verfügbar, ohne Bedienelement.
+- Damit entfallen auch die daran gekoppelten Platten-Checkpoints und ein
+  Button zum Wiederherstellen: Ohne Evaluation gibt es keinen Auslöser, der
+  sagen könnte, welcher Stand der beste ist.
+- Was **bleibt**, ist der Lernstand der besten Episode je Slot im Speicher
+  (7.3). Er hängt am explorativen Episoden-Return, nicht an einer Evaluation,
+  und wird für die Animation gebraucht.
 
 ### 8.5 Vergleich
 
@@ -817,27 +978,73 @@ für alle Läufe.
   aggregiert; der Graph zeigt sie als Unsicherheitsband. Bei Abbruch bleiben
   vollständige Ergebnisse erhalten, unvollständige werden gekennzeichnet.
 
-### 8.6 Summary
+### 8.6 Einzelgraph je Verfahren
+
+Neben dem gemeinsamen Vergleichsgraphen (8.5) lässt sich **jeder aktive Slot
+einzeln** als eigener Reward-Plot darstellen und exportieren.
+
+- Der Einzelgraph zeigt genau einen Slot – Rohkurve, gleitenden Durchschnitt
+  und Referenzlinie – in der Slotfarbe aus 6.2, mit derselben X-Achse, Metrik
+  und Glättung wie der Vergleichsgraph. Nur so sind Einzel- und Vergleichsbild
+  nebeneinander lesbar.
+- Er ist auch **nach** einem Vergleichslauf verfügbar, ohne dass ein Slot neu
+  trainiert werden muss: Die Messdaten liegen bereits vor, es ist eine Frage
+  der Darstellung.
+- Die Legende benennt Slot, Algorithmus und – bei mehrfach belegtem Algorithmus
+  – den abweichenden Parameter, wie in 8.5.
+- Der Export schreibt wahlweise den sichtbaren Einzelgraphen oder in **einer**
+  Aktion je aktivem Slot eine eigene PNG-Datei mit sprechendem, den Slot und
+  den Algorithmus benennenden Namen.
+
+Begründung: Ein Vergleichsgraph beantwortet die Frage „welches Verfahren ist
+besser", ein Einzelgraph die Frage „wie verlief dieses eine Training". Berichte
+brauchen beides, und eine Parameterstudie über drei Ausprägungen verlangt drei
+**getrennte** Plots, nicht drei Kurven in einem Bild.
+
+### 8.7 Summary
 
 - Sie wird live aktualisiert und zeigt für Training und Vergleich konsistent
-  Episoden, ausgeführte Environment-Schritte, aktuelle bzw. gemittelte Rewards
-  und Erfolgsrate.
+  Episoden, ausgeführte Environment-Schritte, beide Budgetgrenzen samt der
+  Angabe, welche den Lauf beendet hat, sowie Rewards und Erfolgsraten.
+- **Mittelwerte umfassen die letzten Episoden, nicht den ganzen Lauf.** Das
+  Fenster ist dasselbe wie die Glättung des Graphen (8.3): Was die Kurve zeigt
+  und was die Summary mittelt, soll dieselbe Aussage sein. Über den gesamten
+  Lauf gemittelt hinge jede Kennzahl noch am untrainierten Anfang und bewegte
+  sich kaum – gerade der Fortschritt, den man sehen will, verschwände im
+  Mittel. Eine **hervorgehobene** Zwischenüberschrift nennt die tatsächlich
+  einbezogene Zahl; liegen weniger Episoden vor, wird über alle vorhandenen
+  gemittelt.
+- Die Zeilen unterhalb dieser Überschrift tragen **kein** Mittelwertzeichen
+  mehr: Die Überschrift sagt es bereits für alle. Es an jeder Zeile zu
+  wiederholen kostet nur Breite in einer ohnehin schmalen Spalte.
+- Die Fußzeile bleibt so kurz wie möglich – im Zweifel eine Zeile. Erklärungen
+  gehören in die Bedienungsanleitung; unter der Tabelle zwingen sie zum
+  Scrollen und verdecken genau das, worum es geht.
+- Kennzahlen, die sich auf den **gesamten** Lauf beziehen – etwa die beste
+  Episode – stehen oberhalb dieser Überschrift. „Beste der letzten zwanzig"
+  wäre keine sinnvolle Größe.
 - Die Vergleichs-Summary besitzt genau eine Ergebnisspalte je aktivem Slot,
   `Verfahren 1` bis `Verfahren 4`, mit dem Algorithmusnamen in der Kopfzeile.
-- Sie enthält einen Abschnitt mit genau den Parametern, in denen sich die
-  Konfigurationen unterscheiden – je Parameter eine Zeile mit dem Wert aller
-  Slots. Ohne ihn ist ein Vergleich mehrerer Parametrisierungen desselben
-  Algorithmus nicht interpretierbar.
+- Belegt ein Algorithmus **mehr als einen** aktiven Slot, folgt ein Abschnitt
+  mit genau den Parametern, in denen sich die Konfigurationen unterscheiden –
+  je Parameter eine Zeile mit dem Wert aller Slots. Ohne ihn wäre eine
+  Parameterstudie nicht interpretierbar: Die Kopfzeile nennt dann dreimal
+  denselben Algorithmus und sagt nicht, welche Spalte welchen Wert hatte. Die
+  Überschrift des Abschnitts nennt den Grund seines Erscheinens.
+- Tragen alle Slots **verschiedene** Algorithmen, entfällt der Abschnitt. Die
+  Kopfzeile erklärt dort bereits alles, und der Block schöbe die Tabelle nur
+  aus dem sichtbaren Bereich. Die Summary soll ohne Scrollen lesbar sein.
 - Unterscheiden sich die Trainingsbudgets, weist die GUI vor dem Start sichtbar
   darauf hin; unzulässig ist es nicht.
 - Bei drei oder vier Spalten bleibt sie vollständig lesbar: notfalls mit
   horizontaler Scrollbar, statt Werte abzuschneiden.
 
-### 8.7 Export
+### 8.8 Export
 
 - Diagramm und Summary werden über klar bezeichnete Aktionen exportiert: der
   Graph mindestens als PNG in der dargestellten Form, die Summary als gut
-  lesbare UTF-8-Textdatei. CSV ist nicht erforderlich.
+  lesbare UTF-8-Textdatei. CSV ist nicht erforderlich. Zum Export einzelner
+  Verfahren siehe 8.6 (Einzelgraph je Verfahren).
 - Dateidialoge schlagen aussagekräftige Namen vor und überschreiben bestehende
   Dateien nicht unbemerkt.
 - Die Schaltflächen bekommen **keine** eigene Kopfzeile: Sie liegen kompakt in
@@ -845,7 +1052,7 @@ für alle Läufe.
   die übrige Höhe der Darstellung gehört, und verdecken weder Kurven noch
   Legende noch Text.
 
-### 8.8 Tabellen und Modelldateien
+### 8.9 Tabellen und Modelldateien
 
 - Tabellen zeigen den vollständigen aktuellen Lernstand, unterscheiden besuchte
   und unbesuchte Zustände und sind scrollbar.
@@ -895,6 +1102,24 @@ Tests laufen nicht beim App-Start. Sie prüfen mindestens:
   Slotkurven durchgezogen, Referenzlinie weiß und gestrichelt
 - die Beschriftung unter dem Animationsbild enthält genau Episode, Schritt und
   Return; Action- und Observationswerte erscheinen nur in der Einblendung
+- Budgetlogik: Ein Lauf endet an der zuerst erreichten der beiden Grenzen aus
+  5.1; bei `Episoden = 0` greift allein das Schrittbudget; Summary und Status
+  weisen aus, welche Grenze gegriffen hat
+- Fortsetzen hängt an: Ein zweiter Start liefert erneut das **volle** Budget an
+  Episoden und Schritten, nicht eine einzelne weitere Episode und keinen Reset
+- Summary-Mittelwerte umfassen genau die letzten Episoden des Glättungsfensters
+  und ändern sich mit ihm; die beste Episode bezieht sich weiter auf den ganzen
+  Lauf
+- Der Unterschiedsblock erscheint bei mehrfach belegtem Algorithmus und
+  entfällt, wenn alle Slots verschiedene Algorithmen tragen
+- Jede gezeichnete Kurve – auch die geglättete – bleibt unter der Punktgrenze
+  aus 8.2, auch bei zehntausenden Episoden
+- Jede Anzeige startet sichtbar; die Wahl `inaktiv` blendet genau eine aus
+  und lässt die übrigen laufen. Einen globalen Schalter gibt es nicht
+- Einzelgraph je Verfahren (8.6): nach einem Vergleichslauf ist jeder aktive
+  Slot einzeln darstellbar, ohne erneutes Training; der Sammelexport erzeugt je
+  aktivem Slot genau eine PNG-Datei; Einzel- und Vergleichsgraph nutzen
+  dieselbe Glättung
 - Import und Konstruktion der App-Komponenten
 
 Bei neuronalen Netzen zusätzlich: Ein- und Ausgabeformen, Targets, Loss,
@@ -917,6 +1142,11 @@ Ein Projekt ist abgeschlossen, wenn alle projektspezifischen Verfahren korrekt
 implementiert sind, die GUI responsiv bleibt, Vergleiche fair und isoliert
 ablaufen, fachlicher Lernfortschritt getestet ist und alle Tests erfolgreich
 sind.
+
+Unterliegt ein Projekt zusätzlich externen Vorgaben – etwa einer
+Aufgabenstellung –, führt sein Prompt eine Tabelle, die **jede einzelne**
+Vorgabe auf die Stelle abbildet, an der sie erfüllt wird. Abgenommen wird gegen
+diese Tabelle, nicht gegen die Erinnerung an die Vorgaben.
 
 ### 9.4 README
 
