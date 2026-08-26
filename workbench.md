@@ -596,8 +596,9 @@ In Spalte 3, in dieser Reihenfolge:
 - Während eines Laufs gehört die Statuszeile dem **Lauf**: Sie nennt die
   beteiligten Verfahren und ihr Budget. Meldungen der Animation überschreiben
   sie nicht – sie erscheinen nur, wenn gerade nichts läuft. Sonst wäre die
-  Information, auf die es ankommt, nach dem ersten Einzelbild verschwunden. Die Fortschrittsanzeige zählt in **Episoden**: Das ist die
-  Größe, die der Benutzer vorgibt und im Graphen wiederfindet. Nur wenn die
+  Information, auf die es ankommt, nach dem ersten Einzelbild verschwunden.
+- Die Fortschrittsanzeige zählt in **Episoden**: Das ist die Größe, die der
+  Benutzer vorgibt und im Graphen wiederfindet. Nur wenn die
   Episodengrenze auf unbegrenzt steht, fehlt der Nenner; dann zählt sie
   ersatzweise Schritte.
 - Beschriftungen benennen nur Bestandteile, die **jedes** Verfahren des

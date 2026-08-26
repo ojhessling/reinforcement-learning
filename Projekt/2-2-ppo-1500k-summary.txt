@@ -1,0 +1,92 @@
+Statistik             Verfahren 1      Verfahren 2
+──────────────────────────────────────────────────
+Algorithmus                   PPO              PPO
+Zufallsstart s                  0                1
+Episoden                   15.206           15.766
+Schritte                1.500.160        1.500.160
+Budget N/E          1.500.000 / ∞    1.500.000 / ∞
+Ende durch          Schrittbudget    Schrittbudget
+Beste Episode     #11499: 1.477,5  #12380: 1.756,9
+Ø der letzten 20 Episoden
+Return                      643,4            729,8
+Länge                         110              112
+Tempo m/s                    1,06             1,60
+Strecke x m                   1,9              2,8
+seitlich m                   0,62             0,36
+Sturzquote                 100,0%           100,0%
+Durchhaltequote              0,0%             0,0%
+Zielquote                    0,0%             0,0%
+
+Zielmarke 5.000 = 1000 Schritte aufrecht, Durchhalten = 1000 Schritte erreicht
+
+Konfiguration:
+[Verfahren 1]
+algorithm: PPO
+total_timesteps: 1500000
+episodes: 0
+learning_rate: 3.56987e-05
+learning_rate_schedule: konstant
+batch_size: 256
+gamma: 0.95
+seed: 0
+actor_arch: (256, 256)
+critic_arch: (256, 256)
+activation: ReLU
+optimizer: Adam
+optimizer_eps: 1e-08
+optimizer_weight_decay: 0.0
+n_steps: 512
+n_epochs: 5
+gae_lambda: 0.9
+clip_range: 0.3
+clip_range_vf: None
+normalize_advantage: True
+ortho_init: False
+ent_coef: 0.00238306
+vf_coef: 0.431892
+max_grad_norm: 2.0
+target_kl: None
+log_std_init: -2.0
+use_sde: False
+sde_sample_freq: -1
+normalize_obs: True
+normalize_reward: True
+clip_obs: 10.0
+clip_reward: 10.0
+
+[Verfahren 2]
+algorithm: PPO
+total_timesteps: 1500000
+episodes: 0
+learning_rate: 3.56987e-05
+learning_rate_schedule: konstant
+batch_size: 256
+gamma: 0.95
+seed: 1
+actor_arch: (256, 256)
+critic_arch: (256, 256)
+activation: ReLU
+optimizer: Adam
+optimizer_eps: 1e-08
+optimizer_weight_decay: 0.0
+n_steps: 512
+n_epochs: 5
+gae_lambda: 0.9
+clip_range: 0.3
+clip_range_vf: None
+normalize_advantage: True
+ortho_init: False
+ent_coef: 0.00238306
+vf_coef: 0.431892
+max_grad_norm: 2.0
+target_kl: None
+log_std_init: -2.0
+use_sde: False
+sde_sample_freq: -1
+normalize_obs: True
+normalize_reward: True
+clip_obs: 10.0
+clip_reward: 10.0
+
+slot_count: 2
+smoothing_window: 20

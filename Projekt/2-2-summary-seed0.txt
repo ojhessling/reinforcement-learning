@@ -1,0 +1,121 @@
+Statistik            Verfahren 1     Verfahren 2     Verfahren 3
+────────────────────────────────────────────────────────────────
+Algorithmus                  PPO             TD3             SAC
+Episoden                   3.901           7.673           2.136
+Schritte                 300.032         300.000         300.000
+Budget N/E           300.000 / ∞     300.000 / ∞     300.000 / ∞
+Ende durch         Schrittbudget   Schrittbudget   Schrittbudget
+Beste Episode     #2504: 1.062,4    #5436: 361,3  #2107: 5.055,7
+Ø der letzten 20 Episoden
+Return                     461,4           171,6         2.153,9
+Länge                         89              39             434
+Tempo m/s                   0,43            0,06            0,21
+Strecke x m                  0,7            -0,0             1,5
+seitlich m                  0,52            0,16            1,18
+Sturzquote                100,0%          100,0%           85,0%
+Durchhaltequote             0,0%            0,0%           15,0%
+Zielquote                   0,0%            0,0%            5,0%
+
+Zielmarke 5.000 = 1000 Schritte aufrecht, Durchhalten = 1000 Schritte erreicht
+
+Konfiguration:
+[Verfahren 1]
+algorithm: PPO
+total_timesteps: 300000
+episodes: 0
+learning_rate: 3.56987e-05
+learning_rate_schedule: konstant
+batch_size: 256
+gamma: 0.95
+seed: 0
+actor_arch: (256, 256)
+critic_arch: (256, 256)
+activation: ReLU
+optimizer: Adam
+optimizer_eps: 1e-08
+optimizer_weight_decay: 0.0
+n_steps: 512
+n_epochs: 5
+gae_lambda: 0.9
+clip_range: 0.3
+clip_range_vf: None
+normalize_advantage: True
+ortho_init: False
+ent_coef: 0.00238306
+vf_coef: 0.431892
+max_grad_norm: 2.0
+target_kl: None
+log_std_init: -2.0
+use_sde: False
+sde_sample_freq: -1
+normalize_obs: True
+normalize_reward: True
+clip_obs: 10.0
+clip_reward: 10.0
+
+[Verfahren 2]
+algorithm: TD3
+total_timesteps: 300000
+episodes: 0
+learning_rate: 0.001
+learning_rate_schedule: konstant
+batch_size: 256
+gamma: 0.99
+seed: 0
+actor_arch: (256, 256)
+critic_arch: (256, 256)
+activation: ReLU
+optimizer: Adam
+optimizer_eps: 1e-08
+optimizer_weight_decay: 0.0
+buffer_size: 500000
+learning_starts: 10000
+tau: 0.005
+train_freq: 1
+gradient_steps: 1
+action_noise: normal
+action_noise_sigma: 0.1
+policy_delay: 2
+target_policy_noise: 0.2
+target_noise_clip: 0.5
+normalize_obs: False
+normalize_reward: False
+clip_obs: 10.0
+clip_reward: 10.0
+
+[Verfahren 3]
+algorithm: SAC
+total_timesteps: 300000
+episodes: 0
+learning_rate: 0.0003
+learning_rate_schedule: konstant
+batch_size: 256
+gamma: 0.99
+seed: 0
+actor_arch: (256, 256)
+critic_arch: (256, 256)
+activation: ReLU
+optimizer: Adam
+optimizer_eps: 1e-08
+optimizer_weight_decay: 0.0
+log_std_init: 0.0
+use_sde: False
+sde_sample_freq: -1
+buffer_size: 500000
+learning_starts: 10000
+tau: 0.005
+train_freq: 1
+gradient_steps: 1
+action_noise: keins
+action_noise_sigma: 0.1
+ent_coef_mode: auto
+ent_coef_value: 1.0
+target_entropy: auto
+target_update_interval: 1
+normalize_obs: False
+normalize_reward: False
+clip_obs: 10.0
+clip_reward: 10.0
+
+slot_count: 3
+smoothing_window: 20

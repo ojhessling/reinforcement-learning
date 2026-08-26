@@ -1110,6 +1110,23 @@ class BudgetTests(unittest.TestCase):
         finally:
             workbench.close()
 
+    def test_continuing_clears_the_previous_ending(self):
+        """Ein Fortsetzen legt kein Modell neu an. Bliebe der alte Ausgang
+        stehen, zeigte die Summary „Benutzerstopp", waehrend laengst wieder
+        trainiert wird."""
+        config = tiny_config("SAC")
+        config.total_timesteps, config.episodes = 50_000, 2
+        workbench = HumanoidWorkbench(config)
+        try:
+            workbench.train()
+            self.assertEqual(workbench.stop_reason, "episodes")
+            gestoppt = threading.Event()
+            gestoppt.set()
+            workbench.train(stop_event=gestoppt)
+            self.assertEqual(workbench.stop_reason, "stopped")
+        finally:
+            workbench.close()
+
     def test_zero_episodes_means_unlimited(self):
         config = dataclasses.replace(default_config("SAC"), episodes=0)
         config.validate()

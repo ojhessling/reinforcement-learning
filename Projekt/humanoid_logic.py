@@ -216,12 +216,15 @@ TEXT_FIELDS = frozenset({"target_entropy"})
 #: Die Vereinheitlichung macht den Vergleich fair.
 DEFAULT_NET_ARCH = (256, 256)
 
-#: Schrittbudget der **Messläufe für den Bericht**, bewusst unter den
-#: Profilwerten (PPO 1e7, TD3/SAC je 2e6): Ein voller Profillauf dauerte auf
-#: der Zielmaschine 6 bis 11 Stunden je Verfahren. Die Figur wird damit
-#: **nicht** laufen; was das kostet, steht in `prompt.md` und im README.
-#: Diese Läufe werden mit `episodes = 0` gefahren, damit alle Verfahren exakt
-#: dieselbe Datenmenge bekommen.
+#: Obergrenze der **Messläufe für den Bericht**: Sie bemisst den Replay Buffer,
+#: der damit in keinem Lauf auch nur einen Übergang verdrängt. Tatsächlich
+#: gefahren wurden rund 300.000 Schritte je Lauf – der Verfahrensvergleich mit
+#: genau diesem Budget, die Parameterstudie bis zum Handstopp bei ~300.400.
+#: Beides liegt bewusst unter den Profilwerten (PPO 1e7, TD3/SAC je 2e6): Ein
+#: voller Profillauf dauerte auf der Zielmaschine 6 bis 11 Stunden je
+#: Verfahren. Die Figur wird damit **nicht** laufen; was das kostet, steht in
+#: `prompt.md` und im README. Diese Läufe werden mit `episodes = 0` gefahren,
+#: damit alle Verfahren exakt dieselbe Datenmenge bekommen.
 REPORT_TIMESTEPS = 500_000
 #: Schrittbudget in der **Voreinstellung** der Oberfläche. Es liegt bewusst in
 #: derselben Größenordnung wie die vorgegebenen 1000 Episoden: Gemessen
@@ -1365,6 +1368,10 @@ class HumanoidWorkbench:
         reset = self.model is None
         if reset:
             self.create_model()
+        # Der Ausgang des **vorigen** Laufs darf nicht stehen bleiben: Bei einem
+        # Fortsetzen wird kein Modell neu angelegt, und die Summary zeigte sonst
+        # stundenlang „Benutzerstopp", während längst wieder trainiert wird.
+        self.stop_reason = None
         done = len(self.history)
         callback = HumanoidCallback(
             stop_event or threading.Event(), output, done, series,

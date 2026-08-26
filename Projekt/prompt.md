@@ -154,14 +154,16 @@ SAC mit Profilparametern über 60.000 Schritte:
 | 300–802 | 93,2 | 461,4 |
 
 **In 60.000 Schritten entstehen bereits 802 Episoden.** Hochgerechnet werden die
-vorgegebenen 1000 Episoden nach rund **80.000 Schritten** erreicht – etwa 16 %
-des Schrittbudgets von 500.000, nach knapp einer halben Stunde. Ein Lauf mit
+vorgegebenen 1000 Episoden nach rund **80.000 Schritten** erreicht – etwa ein
+Sechstel des größten Messbudgets (500.000), nach knapp einer halben Stunde. Ein Lauf mit
 `Episoden = 1000` würde also bei einem Return um 500 abbrechen, während das
 Verfahren noch deutlich steigt.
 
 **Die Messläufe für den Bericht steuert deshalb das Schrittbudget**, mit
-`total_timesteps = 500.000` und `Episoden = 0` – abweichend von der
-Startbelegung, die für einen ersten Eindruck gedacht ist. Der zweite Grund ist die Fairness-Regel aus Workbench 5.1: Bei
+`Episoden = 0` und einem festen `total_timesteps` je Block (300.000 im
+Verfahrensvergleich, 500.000 in der Parameterstudie, siehe *Experimente*) –
+abweichend von der Startbelegung, die für einen ersten Eindruck gedacht ist. Der zweite Grund
+ist die Fairness-Regel aus Workbench 5.1 (Gemeinsame Parameter): Bei
 Humanoid beendet ein Sturz die Episode vorzeitig, Episoden werden mit dem
 Lernfortschritt also länger. SAC sammelt bis Episode 1000 rund 80.000 Schritte;
 ein Verfahren, das langsamer lernt und bei ~25 Schritten je Episode bleibt,
@@ -200,12 +202,12 @@ Die Glättung bestimmt zugleich, über wie viele Episoden die Summary mittelt
 Vor dem Start eines Laufs über 100.000 Schritten weist die GUI auf die
 erwartete Dauer hin.
 
-**Warum 500.000 statt des Profilbudgets:** Die Zoo-Profile sehen 2.000.000
+**Warum weit unter dem Profilbudget:** Die Zoo-Profile sehen 2.000.000
 Schritte (TD3, SAC) bzw. 10.000.000 (PPO) vor. Das wären bei gemessener
 Geschwindigkeit rund 11 h je Off-Policy-Lauf und 5,8 h für PPO – bei drei
 Verfahren, zwei Seeds und einer dreiwertigen Parameterstudie nicht bis zur
 Abgabe zu schaffen. Was dadurch verloren geht, ist ausdrücklich zu benennen:
-**Die Figur wird bei 500.000 Schritten nicht laufen.** Erwartbar ist, dass sie
+**Die Figur wird mit 300.000 bis 500.000 Schritten nicht laufen.** Erwartbar ist, dass sie
 sich zunehmend länger aufrecht hält und schwankend vorwärts kommt. Die
 Referenzwerte des Zoo (unten) werden nicht erreicht; Bericht und README sagen
 das an sichtbarer Stelle. Vergleichbar bleiben die Verfahren trotzdem, weil
@@ -428,24 +430,24 @@ Benchmark des Zoo bei **2.000.000** Schritten:
 | PPO | kein Eintrag für Humanoid |
 
 Beide Werte liegen über der Zielmarke `5000`, die Figur bleibt dort also
-aufrecht **und** bewegt sich vorwärts. Bei unserem Budget von 500.000 Schritten
-sind sie nicht erreichbar; sie dienen als Einordnung, nicht als Erwartung.
+aufrecht **und** bewegt sich vorwärts. Mit den Budgets dieser Arbeit sind sie
+nicht erreichbar; sie dienen als Einordnung, nicht als Erwartung.
 
 **Ungleicher Abstand zum Profilbudget – für den Bericht wichtig.** Die drei
 Profile sind für unterschiedlich lange Läufe getunt:
 
-| Verfahren | Profilbudget | 500.000 Schritte sind davon |
-| --- | --- | --- |
-| PPO | `1e7` | **5 %** |
-| TD3 | `2e6` | 25 % |
-| SAC | `2e6` | 25 % |
+| Verfahren | Profilbudget | 300.000 sind davon | 500.000 sind davon |
+| --- | --- | --- | --- |
+| PPO | `1e7` | **3 %** | **5 %** |
+| TD3 | `2e6` | 15 % | 25 % |
+| SAC | `2e6` | 15 % | 25 % |
 
 Alle Verfahren bekommen nach Workbench 5.1 dasselbe Budget, und das ist
 bezogen auf die **Datenmenge** auch fair. PPO tritt damit aber relativ weiter
 von seinem vorgesehenen Arbeitspunkt entfernt an als die beiden anderen. Ein
 schwaches PPO-Ergebnis belegt deshalb **nicht** ohne Weiteres, dass PPO für
-Humanoid schlechter geeignet ist – es belegt zunächst nur, dass PPO bei 5 %
-seines Budgets weiter zurückliegt. Der Bericht muss das benennen, statt die
+Humanoid schlechter geeignet ist – es belegt zunächst nur, dass PPO bei 3 bis
+5 % seines Budgets weiter zurückliegt. Der Bericht muss das benennen, statt die
 Rangfolge unkommentiert zu übernehmen.
 
 ## Metriken
@@ -469,9 +471,10 @@ in m · Ø seitliche Abweichung in m · Durchhaltequote · Sturzquote · Zielquo
 Alle Mittelwerte umfassen die **letzten** Episoden im Glättungsfenster
 (Workbench 8.6); die beste Episode bezieht sich weiter auf den ganzen Lauf.
 
-Referenzlinie der Graphen: `+5000`, weiß und gestrichelt, in der Legende
-ausdrücklich als **Zielmarke (aufrecht)** und nicht als Gelöst-Schwelle
-bezeichnet.
+Referenzlinie der Graphen: `+5000`, weiß und gestrichelt, in der Legende als
+**Zielmarke** und ausdrücklich nicht als Gelöst-Schwelle bezeichnet. Was die
+Marke bedeutet, sagt die Fußzeile der Summary in einem Satz: `Zielmarke 5.000 =
+1000 Schritte aufrecht`.
 
 ## Einblendung neben der Animation
 
@@ -522,8 +525,25 @@ zugutekommt.
 
 ## Experimente für den Bericht
 
-Zwei Blöcke, jeweils **zwei Seeds** (`0` und `1`) je Konfiguration, `Episoden =
-0`, `total_timesteps = 500.000`.
+Zwei Blöcke, jeweils **zwei Seeds** (`0` und `1`) je Konfiguration und
+`Episoden = 0`. Das Schrittbudget unterscheidet sich zwischen den Blöcken und
+ist deshalb bei jedem angegeben:
+
+| Block | Durchgänge | Schritte je Lauf | Ergebnis |
+| --- | --- | --- | --- |
+| 2.2 Verfahrensvergleich | Seed `0` und `1` | **300.000** | vollständig, beide Durchgänge |
+| 2.3 Parameterstudie | Seed `0` und `1` | **300.000** (Durchgang 1 geplant 500.000, von Hand bei ~300.400 gestoppt) | vollständig, beide Durchgänge |
+
+Innerhalb eines Blocks bekommt jeder Lauf dasselbe Budget – nur so ist der
+Vergleich fair; in 2.3 unterscheiden sich die drei Slots durch den Handstopp um
+0,1 %. Da beide Blöcke bei rund 300.000 Schritten stehen, sind ihre Zahlen
+ausnahmsweise auch untereinander vergleichbar – der Bericht nutzt das für eine
+Probe auf die Reproduzierbarkeit.
+
+Vorgabe 2.3d verlangt nur **ein** Training je Ausprägung; gefahren wurden
+zwei, und das hat sich gelohnt – zwischen den beiden kleineren Lernraten dreht
+sich die Reihenfolge mit dem Seed. Der Bericht sagt an der Auswertung, welche
+Aussage belastbar ist und welche nicht.
 
 Warum zwei Seeds: RL-Training ist zufällig in Initialisierung und Exploration.
 Aus einer einzelnen Kurve je Verfahren lässt sich nicht sagen, ob ein
@@ -534,8 +554,8 @@ lässt sich die Streuung *innerhalb* eines Verfahrens gegen den Abstand
 
 ### Teil 2.2 – Verfahrensvergleich
 
-`PPO`, `TD3`, `SAC` mit den obigen Profilen. Sechs Läufe, zusammen ~11,8 h,
-in **zwei Durchgängen zu drei Slots**:
+`PPO`, `TD3`, `SAC` mit den obigen Profilen, je `300.000` Schritte. Sechs
+Läufe, gemessen rund 7 h, in **zwei Durchgängen zu drei Slots**:
 
 | Durchgang | Slots | Seed |
 | --- | --- | --- |
@@ -547,11 +567,15 @@ Diagramm. Erzeugte Bilder:
 
 | Datei | Inhalt | Vorgabe |
 | --- | --- | --- |
-| `plot-2-2-vergleich-seed0.png` | alle drei Verfahren, Seed 0 | 1.2g, 2.2e–g |
-| `plot-2-2-vergleich-seed1.png` | alle drei Verfahren, Seed 1 | 1.2g, 2.2e–g |
-| `plot-2-2-ppo-seed0.png` … `-seed1.png` | nur PPO, je Seed | 2.2d |
-| `plot-2-2-td3-seed0.png` … `-seed1.png` | nur TD3, je Seed | 2.2d |
-| `plot-2-2-sac-seed0.png` … `-seed1.png` | nur SAC, je Seed | 2.2d |
+| `2-2-vergleich-seed0.png` | alle drei Verfahren, Seed 0 | 1.2g, 2.2e–g |
+| `2-2-vergleich-seed1.png` | alle drei Verfahren, Seed 1 | 1.2g, 2.2e–g |
+| `2-2-ppo-seed0.png` … `-seed1.png` | nur PPO, je Seed | 2.2d |
+| `2-2-td3-seed0.png` … `-seed1.png` | nur TD3, je Seed | 2.2d |
+| `2-2-sac-seed0.png` … `-seed1.png` | nur SAC, je Seed | 2.2d |
+
+Dazu je Durchgang die Summary als `2-2-summary-seed0.txt` beziehungsweise
+`-seed1.txt`; sie trägt die Konfiguration aller drei Slots und belegt, dass
+sich die Durchgänge nur im Seed unterscheiden.
 
 Die Einzelbilder entstehen über Workbench 8.6 (Einzelgraph je Verfahren) aus
 denselben Läufen – **ohne** erneutes Training. Im Bericht bekommt jedes
@@ -562,10 +586,20 @@ Bewertet wird nach den drei Kriterien der Aufgabenstellung – Lernkurve und
 Konvergenzgeschwindigkeit, Stabilität und Variabilität, maximal erreichter
 Reward –, jeweils mit einer konkreten Beobachtung aus den Plots belegt.
 
+**Gegenprobe zum Budget (nicht geplant, nachträglich ergänzt).** Der Bericht
+hält in 2.2.4 fest, dass 300.000 Schritte bei PPO nur 3 % seines Profilbudgets
+sind, bei TD3 und SAC dagegen 15 %. Weil PPO rund zehnmal schneller rechnet,
+lässt sich dieser Vorbehalt billig prüfen: zwei Läufe über je 1,5 Mio Schritte –
+ebenfalls 15 % seines Profilbudgets –, Seeds `0` und `1`, sonst unverändertes
+Profil, rund 50 Minuten je Lauf. Dateien: `2-2-ppo-1500k-vergleich.png`,
+`2-2-ppo-1500k-seed0/1.png`, `2-2-ppo-1500k-summary.txt`. Das Ergebnis steht in
+2.2.5 des Berichts.
+
 ### Teil 2.3 – Parameterstudie
 
 Für das in 2.2 beste Verfahren **ein** besonders sensitiver Parameter in drei
-Ausprägungen: empfohlener Wert, kleiner, größer. Sechs Läufe, ~16,7 h.
+Ausprägungen: empfohlener Wert, kleiner, größer. Je Durchgang drei Slots
+gleichzeitig, gemessen rund 5,5 h für 300.000 Schritte.
 
 **Kriterium für „bestes Verfahren", vor den Läufen festgelegt:** mittlerer
 Return über die **letzten 50 Episoden**, gemittelt über beide Seeds. Der
@@ -592,17 +626,27 @@ sichtbaren Unterschied, klein genug, dass der mittlere Lauf nicht als einziger
 etwas lernt. Weicht die Beobachtung davon ab, wird das im Bericht benannt statt
 die Werte nachträglich zu schönen.
 
+**Entschieden nach 2.2:** `SAC` gewinnt nach dem oben festgelegten Kriterium
+mit Abstand (2.711,6 gegen 491,9 bei PPO und 407,3 bei TD3, gemittelt über
+beide Durchgänge). Die Studie läuft also mit `SAC` und den Lernraten `1e-4`,
+`3e-4` und `1e-3`. Ausgewertet wurden die letzten **20** statt 50 Episoden –
+das ist das Glättungsfenster, mit dem die Workbench die Summary schreibt; bei
+einem Abstand von Faktor 5,5 ändert das die Wahl nicht. Der Bericht benennt
+diese Abweichung.
+
 Ablauf wie in 2.2, zwei Durchgänge zu drei Slots – die drei Slots tragen hier
 denselben Algorithmus mit den drei Lernraten, Workbench 6.2 sorgt für die
 Kennzeichnung des abweichenden Parameters in der Legende:
 
 | Datei | Inhalt | Vorgabe |
 | --- | --- | --- |
-| `plot-2-3-vergleich-seed0.png` | alle drei Ausprägungen, Seed 0 | 1.2g |
-| `plot-2-3-vergleich-seed1.png` | alle drei Ausprägungen, Seed 1 | 1.2g |
-| `plot-2-3-lr-klein-seed0/1.png` | nur die kleine Lernrate | **2.3c**, 2.3d |
-| `plot-2-3-lr-empfohlen-seed0/1.png` | nur der Profilwert | **2.3c**, 2.3d |
-| `plot-2-3-lr-gross-seed0/1.png` | nur die große Lernrate | **2.3c**, 2.3d |
+| `2-3-vergleich-seed0.png` … `-seed1.png` | alle drei Ausprägungen, je Durchgang | 1.2g |
+| `2-3-lr-klein-seed0/1.png` | nur die kleine Lernrate `1e-4` | **2.3c**, 2.3d |
+| `2-3-lr-empfohlen-seed0/1.png` | nur der Profilwert `3e-4` | **2.3c**, 2.3d |
+| `2-3-lr-gross-seed0/1.png` | nur die große Lernrate `1e-3` | **2.3c**, 2.3d |
+
+Dazu je Durchgang `2-3-summary-seed0.txt` beziehungsweise `-seed1.txt` mit den
+Kennzahlen und der vollständigen Konfiguration aller drei Slots.
 
 Vorgabe 2.3c verlangt ausdrücklich **unterschiedliche** Reward-Plots je
 Ausprägung, nicht drei Kurven in einem Bild – die Einzelgraphen sind daher
@@ -683,8 +727,8 @@ als offizielle Gelöst-Schwelle ausgewiesen; die vier Rewardanteile werden
 getrennt ausgewiesen; die seitliche Abweichung erscheint in Summary und
 Einblendung; Episoden- und Schrittgrenze wirken beide, ein zweiter Start hängt
 das volle Budget an, und die beendende Grenze ist ablesbar; die Summary mittelt
-über das Glättungsfenster und passt ohne Scrollen ins Feld; der
-die Unterschiedszeilen erscheinen genau dann, wenn ein Algorithmus mehrere Slots
+über das Glättungsfenster und passt ohne Scrollen ins Feld; die
+Unterschiedszeilen erscheinen genau dann, wenn ein Algorithmus mehrere Slots
 belegt; jedes Verfahren lässt sich einzeln darstellen und exportieren; die
 Einblendung zeigt die verdichtete Auswahl statt aller 348 Werte; die Animation
 lässt sich je Slot auf `inaktiv` stellen und blendet dann genau diese Anzeige
@@ -710,7 +754,7 @@ wird gegen diese Tabelle. Quelle ist die Aufgabenstellung
 | 1.1c | beste Methode wählen, sensitiver Parameter in 3 Ausprägungen | *Experimente*, Teil 2.3 |
 | 1.2a | Animation im Training **anzeigen** | Workbench 7.1, 7.2 |
 | 1.2b | während des Trainings **an- und abschaltbar** | Workbench 7.3 – Wahl je Verfahren, `inaktiv` blendet aus; beim Start alle sichtbar |
-| 1.2c | Eingabe **Anzahl Episoden, Default 1000** | Workbench 5.1 (`Episoden`), *Budgetgrenzen* |
+| 1.2c | Eingabe **Anzahl Episoden, Default 1000** | Workbench 5.1 (Gemeinsame Parameter), *Budgetgrenzen* |
 | 1.2d | Methoden **idealerweise parallel** | Workbench 8.5 – alle Slots starten parallel |
 | 1.2e | episodenweiser Reward **dünn** | Workbench 8.2 – Rohkurve, verringerte Deckkraft und Strichstärke |
 | 1.2f | Episodendurchschnitt **fett** | Workbench 8.3 – kräftige Linie, Fenster einstellbar |
@@ -742,7 +786,7 @@ wird gegen diese Tabelle. Quelle ist die Aufgabenstellung
 | # | Vorgabe | erfüllt durch |
 | --- | --- | --- |
 | 3.1 | kurzer, aussagekräftiger Bericht in **Markdown** | `KLR-339-2026-08-Hessling_Oliver.md` |
-| 3.2 | kurze **Präsentation** | **offen** – wird entschieden, wenn Anwendung und Bericht stehen. Vor Abgabe zu klären, die Vorgabe entfällt nicht |
+| 3.2 | kurze **Präsentation** | `praesentation.md` – 17 Folien für 10–12 min, Sprechtext in `praesentation-notizen.md`; Export als PDF und HTML |
 | H1 | Beschreibung der Applikation **mit Screenshot** | *Abgabe* |
 | H2 | **alle** Reward-Plots übersichtlich einfügen | *Abgabe* – Plots liegen im selben Ordner |
 | H3 | Beobachtungen klar und nachvollziehbar | *Abgabe* |

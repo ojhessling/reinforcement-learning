@@ -7,9 +7,9 @@ Vergleich: **PPO**, **TD3** und **SAC**.
 Abschlussprojekt des Kurses D21195UYS (AlfaTraining, August 2026). Die
 zugeteilte Aufgabe lautet `Humanoid-v5` mit genau diesen drei Verfahren.
 
-> **Erwartungshaltung vorweg:** Das Standardbudget von 500.000 Schritten liegt
-> **unter** den Zoo-Profilwerten (PPO 10 Mio., TD3/SAC je 2 Mio.). Die Figur
-> wird damit **nicht laufen**. Erwartbar ist, dass sie sich zunehmend länger
+> **Erwartungshaltung vorweg:** Die Messläufe dieser Arbeit fahren rund
+> 300.000 Schritte – weit **unter** den Zoo-Profilwerten (PPO 10 Mio., TD3/SAC
+> je 2 Mio.). Die Figur wird damit **nicht laufen**. Erwartbar ist, dass sie sich zunehmend länger
 > aufrecht hält und schwankend vorwärts kommt. Warum das so gewählt ist, steht
 > unter [Budget und Laufzeit](#budget-und-laufzeit).
 
@@ -170,8 +170,8 @@ Benchmark des Zoo bei **2 Mio.** Schritten:
 | TD3 | 5566,7 ± 14,5 |
 | PPO | kein Humanoid-Eintrag |
 
-Beide Werte liegen über der Zielmarke 5000. Mit dem Standardbudget von 500.000
-Schritten sind sie **nicht** erreichbar; sie dienen der Einordnung.
+Beide Werte liegen über der Zielmarke 5000. Mit rund 300.000 Schritten sind
+sie **nicht** erreichbar; sie dienen der Einordnung.
 
 ## Budget und Laufzeit
 
@@ -185,11 +185,15 @@ zuerst erreichten; die Summary weist unter *Ende durch* aus, welche es war.
 
 Die beiden Standardwerte liegen bewusst in derselben Größenordnung: 1000
 Episoden entsprechen bei SAC gemessen rund 80.000 Schritten. Stünde bei `N` das
-Budget der Messläufe (500.000), griffe immer die Episodengrenze und die
+Budget der Messläufe (300.000), griffe immer die Episodengrenze und die
 Schrittzahl wäre reine Dekoration.
 
-**Für die Messläufe** wird `N = 500.000` und `E = 0` gesetzt – nur so bekommen
-alle Verfahren exakt dieselbe Datenmenge.
+**Für die Messläufe** wird `E = 0` gesetzt und das Schrittbudget vorgegeben –
+nur so bekommen alle Verfahren exakt dieselbe Datenmenge. Der
+Verfahrensvergleich (Bericht 2.2) lief mit `N = 300.000`, die Parameterstudie
+(2.3) ebenfalls – ihr erster Durchgang wurde bei rund 300.400 Schritten von
+Hand gestoppt. Dazu kommt eine Gegenprobe mit PPO über 1,5 Mio Schritte
+(Bericht 2.2.5). Innerhalb eines Vergleichs ist das Budget immer gleich.
 
 Warum beides: Eine Humanoid-Episode endet beim Sturz. Untrainiert fällt die
 Figur nach im Mittel **24,5 Schritten**; mit dem Lernfortschritt werden
@@ -236,16 +240,18 @@ während eines laufenden Trainings wirkt nicht mehr auf dieses.
 
 ### Speicher
 
-Der Replay Buffer ist auf das Schrittbudget verkleinert (`500.000` statt `1e6`)
-und puffert Beobachtungen als `float32`:
+Der Replay Buffer ist auf `500.000` statt `1e6` verkleinert und puffert
+Beobachtungen als `float32`:
 
 | `buffer_size` | dtype | nur Observations |
 | --- | --- | --- |
 | `1e6` | `float64` | 5,19 GB |
 | `500.000` | `float32` | **1,30 GB** |
 
-Die Verkleinerung ist verhaltensneutral – bei 500.000 Schritten wird nie ein
-Übergang verdrängt. `float32` ist folgenlos, weil SB3 beim Sampeln ohnehin
+Die Verkleinerung ist für die Messläufe verhaltensneutral: Bei höchstens
+300.000 Schritten wird nie ein Übergang verdrängt. Erst jenseits von 500.000
+Schritten – etwa in einem langen Zusatzlauf – vergisst der Buffer die ältesten
+Übergänge; dort ist es eine echte Abweichung vom Profil und gehört benannt. `float32` ist folgenlos, weil SB3 beim Sampeln ohnehin
 dorthin wandelt. `optimize_memory_usage=True` wäre unzulässig: Es verträgt sich
 nicht mit `handle_timeout_termination`, und Humanoid trunkiert.
 
@@ -265,6 +271,15 @@ Vier Schaltflächen, mehr braucht der Ablauf nicht:
 **Ein zweiter Druck setzt nichts zurück**, sondern hängt erneut das volle
 Budget an – Kurve und Summary wachsen weiter. Der Fortschrittsbalken zählt in
 Episoden; steht `Episoden E` auf `0`, zählt er Schritte.
+
+Liegt das Schrittbudget über der Startbelegung von 100.000, fragt die
+Anwendung vor dem Start nach und nennt die erwartete Dauer – gerechnet mit den
+gemessenen Geschwindigkeiten des langsamsten Slots. Ein Fehlgriff kostet hier
+keine Sekunden, sondern Stunden.
+
+Oben rechts öffnet `Bedienungsanleitung` ein eigenes Fenster mit der
+vollständigen Erklärung von Ablauf, Budget, Environment, Verfahren, Diagrammen,
+Summary und Animation.
 
 Neben jedem Verfahren im Konfigurator steht unter der Überschrift **Animation**
 ein Feld:
@@ -363,11 +378,16 @@ Hand im Logikmodul.
 
 ## Bekannte Grenzen
 
-- **Die Figur läuft bei 500.000 Schritten nicht.** Das ist kein Fehler, sondern
-  die Folge eines Budgets unter dem Profilwert.
-- **PPO tritt benachteiligt an.** 500.000 Schritte sind 5 % seines
-  Profilbudgets, bei TD3 und SAC je 25 %. Ein schwaches PPO-Ergebnis belegt
-  deshalb nicht ohne Weiteres, dass PPO für Humanoid ungeeignet ist.
+- **Die Figur läuft mit diesem Budget nicht.** Das ist kein Fehler, sondern
+  die Folge eines Budgets unter dem Profilwert. Gemessen erreicht SAC nach
+  300.000 Schritten im Mittel 2.154 und 3.269 Return (zwei Durchgänge) – die
+  Figur hält sich zunehmend länger aufrecht, statt zu laufen. In der besten
+  gemessenen Konfiguration bleibt sie in 68 % der Episoden die vollen 1000
+  Schritte oben, kommt dabei aber nur rund 2 m weit.
+- **PPO tritt benachteiligt an – geprüft.** 300.000 Schritte sind 3 % seines
+  Profilbudgets, bei TD3 und SAC je 15 %. Die Gegenprobe mit 1,5 Mio Schritten
+  (ebenfalls 15 %, rund 50 Minuten je Lauf) bringt PPO um 40 % nach vorn und
+  lässt es trotzdem beim Vierfachen unter SAC. Bericht 2.2.5.
 - Die Animation kostet spürbar Rechenzeit; die eingestellte Bildrate ist eine
   Obergrenze. Der Standard von **20 FPS** liegt bewusst unter der
   environment-eigenen Rate von 67 – das ergibt rund dreifache Zeitlupe, weil
@@ -379,6 +399,12 @@ Hand im Logikmodul.
   Lernfortschritt weg – Diagramme und Summary vorher exportieren.
 - Mehrere Verfahren gleichzeitig zu trainieren bringt auf einer Maschine mit
   zwei Performance-Kernen wenig Zeitgewinn.
+- **Der Seed macht Läufe vergleichbar, nicht identisch.** Ein Vergleich führt
+  seine Slots als Threads eines Prozesses aus; alle teilen sich denselben
+  Zufallsstrom von PyTorch, und wie die Threads verschachtelt werden, ist von
+  Lauf zu Lauf verschieden. Zwei Läufe derselben Konfiguration mit demselben
+  Seed lieferten gemessen 2.136 gegen 1.947 Episoden. Für exakte
+  Wiederholbarkeit müssten die Slots eigene Prozesse mit je einem Thread sein.
 - Von den 348 Observationswerten zeigt die Einblendung eine begründete Auswahl;
   `cinert`, `cvel` und `cfrc_ext` (286 Werte) erscheinen nur verdichtet.
 
@@ -392,3 +418,7 @@ Hand im Logikmodul.
 | `humanoid_render.py` | isolierter MuJoCo-Renderprozess |
 | `prompt.md` | Projektvorgaben und Vorgabenabgleich |
 | `tests/` | Testsuite |
+| `KLR-339-2026-08-Hessling_Oliver.md` | Bericht der Kursabgabe |
+| `praesentation.md`, `praesentation-notizen.md` | Folien und Sprechtext |
+| `2-2-*.png`, `2-3-*.png`, `*-summary.txt` | Messläufe: Plots und Kennzahlen |
+| `screenshot-*.png`, `animation-*.mp4` | Abbildungen und Videos der Anwendung |

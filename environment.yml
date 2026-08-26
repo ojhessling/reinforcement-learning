@@ -13,6 +13,9 @@ dependencies:
   - pip:
       - pygame>=2.5
       - stable-baselines3==2.9.0
+      # torch wird von stable-baselines3 mitgebracht, aber auch direkt
+      # importiert (Thread-Zahl, Policy-Kopien) - deshalb ausdruecklich.
+      - torch>=2.3
       # swig muss vor box2d stehen: das Box2D-Paket benoetigt es zum Bauen.
       # Box2D wird ab 10-lunarlander fuer die Gymnasium-Box2D-Environments gebraucht.
       - swig

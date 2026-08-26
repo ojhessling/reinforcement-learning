@@ -14,7 +14,7 @@ from dataclasses import asdict, fields
 from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog, font as tkfont, messagebox, ttk
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -25,7 +25,7 @@ from humanoid_logic import (
     ACTION_LIMIT, ACTUATOR_GROUPS, ACTUATOR_TO_JOINT, ALGORITHMS, BOOLEAN_FIELDS,
     CHOICE_FIELDS, CONTACT_COST_MAX, DEFAULT_TORCH_THREADS, DEFAULT_TOTAL_TIMESTEPS,
     FRAME_HEIGHT, FRAME_WIDTH,
-    INTEGER_FIELDS, MAX_EPISODE_STEPS, OPTIONAL_FLOAT_FIELDS, REPORT_TIMESTEPS,
+    INTEGER_FIELDS, MAX_EPISODE_STEPS, OPTIONAL_FLOAT_FIELDS,
     STOP_REASONS,
     TARGET_RETURN, TUPLE_FIELDS, EpisodeMetric, HumanoidConfig,
     HumanoidWorkbench, action_readout, config_differences, default_config,
@@ -83,6 +83,25 @@ def slugify(text: str) -> str:
 def german(value: float, digits: int = 1) -> str:
     """Zahl mit deutschem Dezimalkomma und Tausenderpunkt."""
     return f"{value:,.{digits}f}".replace(",", "\x00").replace(".", ",").replace("\x00", ".")
+
+
+#: Gemessene Trainingsgeschwindigkeit in Schritten/s auf der Referenzmaschine
+#: (6 Kerne, davon 2 Performance-Kerne, `Threads = 4`), je Verfahren **allein**.
+#: Mehrere Slots gleichzeitig teilen sich die Kerne und brauchen länger.
+MEASURED_STEPS_PER_SECOND = {"PPO": 481.0, "TD3": 50.0, "SAC": 50.0}
+
+
+def estimated_seconds(algorithm: str, timesteps: int) -> float:
+    """Dauer eines Laufs allein auf der Referenzmaschine, in Sekunden."""
+    return timesteps / MEASURED_STEPS_PER_SECOND.get(algorithm, 50.0)
+
+
+def duration_text(seconds: float) -> str:
+    """Dauer in der Einheit, in der man sie plant: Minuten bis anderthalb
+    Stunden, darüber Stunden."""
+    if seconds < 90 * 60:
+        return f"rund {round(seconds / 60)} min"
+    return f"rund {german(seconds / 3600)} h"
 
 
 def thousands(value: int) -> str:
@@ -246,6 +265,50 @@ SELECTION_SPACER = 3
 #: Ab dieser Zeile stehen die Slots. Darüber die beiden globalen Einstellungen,
 #: die für alle gelten – erst die Regel, dann die Belegung.
 SELECTION_ROW_OFFSET = 2
+
+
+def autohide(bar: ttk.Scrollbar) -> Callable[[str, str], None]:
+    """Rückgabewert für `yscrollcommand`/`xscrollcommand`: blendet die Leiste
+    aus, solange der Inhalt vollständig sichtbar ist.
+
+    Eine Leiste, die nichts zu schieben hat, ist keine Information, sondern ein
+    Streifen, der Platz kostet. Umgeschaltet wird nur bei einem Wechsel des
+    Zustands: `grid()` löst selbst wieder eine Rückmeldung aus, und ohne diese
+    Bremse geriete die Anzeige bei genau passendem Inhalt ins Flackern.
+
+    Die Leiste muss vorher **gerastert** sein; `grid_remove` merkt sich ihren
+    Platz, `grid()` stellt genau ihn wieder her.
+    """
+    shown = True
+
+    def report(first: str, last: str) -> None:
+        nonlocal shown
+        bar.set(first, last)
+        needed = float(first) > 0.0 or float(last) < 1.0
+        if needed and not shown:
+            bar.grid()
+            shown = True
+        elif not needed and shown:
+            bar.grid_remove()
+            shown = False
+
+    return report
+
+
+def manual_split(lines: list[str]) -> int:
+    """Index der Leerzeile, an der die Anleitung in zwei Spalten zerfällt.
+
+    Getrennt wird an einer Kapitelgrenze – mitten in einem Absatz zu brechen
+    zwingt den Blick zurück nach oben links. Unter den Grenzen gewinnt die,
+    die die höhere der beiden Spalten am niedrigsten hält: Diese Höhe
+    bestimmt, ob das Fenster ohne Scrollen auf den Bildschirm passt.
+    """
+    breaks = [index for index in range(1, len(lines) - 1)
+              if not lines[index].strip() and lines[index + 1].strip()
+              and not lines[index + 1].startswith(" ")]
+    if not breaks:
+        return len(lines) // 2
+    return min(breaks, key=lambda index: max(index, len(lines) - index - 1))
 
 
 def apply_field_grid(grid: tk.Widget) -> None:
@@ -560,8 +623,8 @@ class HumanoidGUI:
         header.pack(fill="x", pady=(0, 6))
         ttk.Label(header, text="Humanoid Workbench",
                   font=("TkDefaultFont", 18, "bold")).pack(side="left")
-        ttk.Label(header, text="PPO, SAC und TD3 – sechs Gelenke, ein Ziel: so schnell "
-                               "wie möglich nach rechts").pack(side="left", padx=16)
+        ttk.Label(header, text="PPO, TD3 und SAC – 17 Gelenke in 3D, ein Ziel: "
+                               "aufrecht bleiben und vorwärts gehen").pack(side="left", padx=16)
         ttk.Button(header, text="Bedienungsanleitung", command=self.instructions).pack(side="right")
         self.splitter = ttk.Panedwindow(outer, orient="vertical")
         self.splitter.pack(fill="both", expand=True)
@@ -653,10 +716,11 @@ class HumanoidGUI:
         self.summary_bold = tkfont.Font(font=self.summary_text.cget("font"))
         self.summary_bold.configure(weight="bold")
         self.summary_text.tag_configure("bold", font=self.summary_bold)
-        self.summary_text.configure(yscrollcommand=summary_y.set, xscrollcommand=summary_x.set,
-                                    state="disabled")
         summary_y.grid(row=0, column=1, sticky="ns")
         summary_x.grid(row=1, column=0, sticky="ew")
+        self.summary_text.configure(yscrollcommand=autohide(summary_y),
+                                    xscrollcommand=autohide(summary_x),
+                                    state="disabled")
 
     def _controls(self, parent: ttk.Frame) -> None:
         """Kopfzeile aus Verfahrensauswahl, Steuerung und Status; darunter über
@@ -1053,12 +1117,40 @@ class HumanoidGUI:
         self._training_summary()
         self.status.set(f"Bereit – {count} Verfahren aktiv")
 
-    def _initialize_layout(self) -> None:
-        self.root.update_idletasks()
+    def _place_sash(self, _event: Any = None) -> None:
+        """Den Teiler genau auf die Höhe setzen, die das Bedienpanel braucht.
+
+        Nicht auf die Hälfte: Der obere Bereich zeigt Bedienpanel und
+        Animationen, und das Bedienpanel ist mit seiner benötigten Höhe fertig.
+        Alles darüber hinaus ist unten besser aufgehoben, wo Diagramm und
+        Summary jede Zeile gebrauchen können. Derselbe Wert ist zugleich die
+        Untergrenze: Ein kleinerer Teiler schnitte das Bedienpanel ab.
+
+        Nachgeführt wird bei jeder Größenänderung: Ein Panedwindow verteilt
+        gewachsene Höhe von sich aus auf beide Bereiche, und die Hälfte davon
+        landete oben als leerer Rand. Über die Gewichte ist das nicht zu
+        regeln – ein Gewicht von 0 zwingt den oberen Bereich auf die von ihm
+        gemeldete Höhe, und die ist zu klein, weil das Bedienpanel seine
+        Größe nicht nach oben durchreicht. Gesetzt wird nur bei echter
+        Abweichung: `sashpos` löst selbst ein `<Configure>` aus.
+        """
         available = self.splitter.winfo_height()
+        if available <= 1:
+            return
         required = max((child.winfo_y() + child.winfo_reqheight()
                         for child in self.controls.winfo_children()), default=400) + 10
-        self.splitter.sashpos(0, min(max(required, int(available * .50)), available - MIN_CHART_HEIGHT))
+        wanted = max(min(required, available - MIN_CHART_HEIGHT), 0)
+        if abs(self.splitter.sashpos(0) - wanted) > 1:
+            self.splitter.sashpos(0, wanted)
+
+    def _initialize_layout(self) -> None:
+        self.root.update_idletasks()
+        self._place_sash()
+        self.splitter.bind("<Configure>", self._place_sash)
+        # Zweiter Durchgang, nachdem Tk die erste Zuteilung verarbeitet hat:
+        # Solange das Bedienpanel gestaucht ist, meldet es eine zu kleine
+        # benötigte Höhe, und ein einzelner Aufruf bliebe darunter stehen.
+        self.root.after_idle(self._place_sash)
         for slot, frame in enumerate(self.last_frames):
             if frame is not None:
                 self._show_frame(slot, frame)
@@ -1312,6 +1404,29 @@ class HumanoidGUI:
 
     # ----------------------------------------------------------------- Training
 
+    def _confirm_long_run(self, configs: list[HumanoidConfig]) -> bool:
+        """Vor einem Lauf über der Startbelegung die erwartete Dauer nennen.
+
+        Ein Fehlgriff kostet hier keine Sekunden, sondern Stunden: Ein
+        Off-Policy-Lauf über das Budget der Messläufe rechnet halbe Nächte
+        durch. Genannt wird die Dauer des **längsten** Slots allein; laufen
+        mehrere gleichzeitig, teilen sie sich die Kerne und brauchen länger.
+        """
+        if all(config.total_timesteps <= DEFAULT_TOTAL_TIMESTEPS for config in configs):
+            return True
+        laengster = max(configs, key=lambda config: estimated_seconds(
+            config.algorithm, config.total_timesteps))
+        dauer = duration_text(estimated_seconds(
+            laengster.algorithm, laengster.total_timesteps))
+        wenn_mehrere = ("\nMehrere Slots gleichzeitig teilen sich die Kerne und brauchen länger."
+                        if len(configs) > 1 else "")
+        return messagebox.askyesno(
+            "Langer Lauf",
+            f"{laengster.algorithm} über {thousands(laengster.total_timesteps)} Schritte "
+            f"dauert auf dieser Maschine {dauer}.{wenn_mehrere}\nStarten?",
+            parent=self.root,
+        )
+
     def start_training(self) -> None:
         self._apply_threads()
         if self.busy:
@@ -1323,6 +1438,8 @@ class HumanoidGUI:
             self._animation_settings()
         except ValueError as error:
             messagebox.showerror("Ungültige Einstellungen", str(error), parent=self.root)
+            return
+        if not self._confirm_long_run([config]):
             return
         if runtime.workbench.model is not None \
                 and config.signature() != runtime.workbench.config.signature():
@@ -1379,6 +1496,8 @@ class HumanoidGUI:
             + " Schritte. Der Vergleich ist dann nicht budgetgleich. Trotzdem starten?",
             parent=self.root,
         ):
+            return
+        if not self._confirm_long_run(configs):
             return
         for slot, config in enumerate(configs):
             runtime = self.slots[slot]
@@ -2625,12 +2744,17 @@ class HumanoidGUI:
         self.status.set(f"Bereit – {SLOT_LABELS[slot]} zurückgesetzt")
 
     def _show_manual(self, text: str) -> None:
-        """Bedienungsanleitung in einem eigenen, scrollbaren Fenster.
+        """Bedienungsanleitung in einem eigenen Fenster, zweispaltig.
 
         Ein Meldungsdialog taugt dafür nicht: Er kann nicht scrollen und wächst
         mit dem Text, bis seine Schaltfläche unter den Bildschirmrand rutscht –
-        dann lässt er sich nicht mehr schließen. Dieses Fenster passt sich dem
-        Bildschirm an, scrollt und reagiert auf Escape.
+        dann lässt er sich nicht mehr schließen.
+
+        Zwei Spalten statt einer: Der Text ist doppelt so hoch wie ein
+        Bildschirm, nebeneinander gestellt passt er ohne Scrollen. Die Breite
+        kostet nichts, sie stand ohnehin ungenutzt daneben. Bleibt auf einem
+        kleineren Bildschirm doch etwas übrig, scrollt jede Spalte für sich;
+        die Leisten erscheinen nur dann.
         """
         window = tk.Toplevel(self.root)
         window.title("Bedienungsanleitung")
@@ -2647,176 +2771,192 @@ class HumanoidGUI:
         body = ttk.Frame(window, padding=8)
         body.pack(side="top", fill="both", expand=True)
         body.rowconfigure(0, weight=1)
-        body.columnconfigure(0, weight=1)
-        view = tk.Text(body, wrap="none", background=self.FIELD, foreground=self.FG,
-                       insertbackground=self.FG, relief="flat", font="TkFixedFont",
-                       padx=8, pady=6)
-        view.grid(row=0, column=0, sticky="nsew")
-        vertical = ttk.Scrollbar(body, orient="vertical", command=view.yview)
-        vertical.grid(row=0, column=1, sticky="ns")
-        horizontal = ttk.Scrollbar(body, orient="horizontal", command=view.xview)
-        horizontal.grid(row=1, column=0, sticky="ew")
-        view.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
-        view.insert("1.0", text)
-        # Überschriften fett: Sie stehen als einzelne Zeile ohne Einrückung
-        # zwischen zwei Leerzeilen.
-        bold = tkfont.Font(font=view.cget("font"))
-        bold.configure(weight="bold")
-        view.tag_configure("kapitel", font=bold, foreground=self.ACCENT)
+        # Spalte 2 ist die Lücke zwischen den beiden Textspalten.
+        body.columnconfigure(2, minsize=16)
+
         lines = text.split("\n")
-        for index, line in enumerate(lines, start=1):
-            previous = lines[index - 2] if index >= 2 else ""
-            if line and not line.startswith(" ") and not previous.strip() \
-                    and not line.endswith(".") and len(line) < 40:
-                view.tag_add("kapitel", f"{index}.0", f"{index}.end")
-        view.configure(state="disabled")
+        cut = manual_split(lines)
+        parts = (lines[:cut], lines[cut + 1:])
+        views, bold = [], None
+        for column, part in enumerate(parts):
+            view = tk.Text(body, wrap="none", background=self.FIELD, foreground=self.FG,
+                           insertbackground=self.FG, relief="flat", font="TkFixedFont",
+                           padx=8, pady=6)
+            view.grid(row=0, column=column * 3, sticky="nsew")
+            body.columnconfigure(column * 3, weight=1)
+            vertical = ttk.Scrollbar(body, orient="vertical", command=view.yview)
+            vertical.grid(row=0, column=column * 3 + 1, sticky="ns")
+            horizontal = ttk.Scrollbar(body, orient="horizontal", command=view.xview)
+            horizontal.grid(row=1, column=column * 3, sticky="ew")
+            view.configure(yscrollcommand=autohide(vertical),
+                           xscrollcommand=autohide(horizontal))
+            view.insert("1.0", "\n".join(part))
+            # Überschriften fett: Sie stehen als einzelne Zeile ohne Einrückung
+            # zwischen zwei Leerzeilen. Die Schrift muss erhalten bleiben,
+            # sonst räumt Tk das Font-Objekt ab.
+            if bold is None:
+                bold = tkfont.Font(font=view.cget("font"))
+                bold.configure(weight="bold")
+                self.manual_bold = bold
+            view.tag_configure("kapitel", font=bold, foreground=self.ACCENT)
+            for index, line in enumerate(part, start=1):
+                previous = part[index - 2] if index >= 2 else ""
+                if line and not line.startswith(" ") and not previous.strip() \
+                        and not line.endswith(".") and len(line) < 40:
+                    view.tag_add("kapitel", f"{index}.0", f"{index}.end")
+            view.configure(state="disabled")
+            views.append(view)
+        first = views[0]
 
         # Größe aus dem Inhalt ableiten, aber am Bildschirm begrenzen. Gemessen
         # wird die **längste Zeile selbst**: Zeichenzahl mal Breite einer Ziffer
         # geht daneben, sobald die Darstellung nicht exakt gleich breit ist.
-        character = tkfont.Font(font=view.cget("font"))
+        character = tkfont.Font(font=first.cget("font"))
         widest = max(character.measure(line) for line in lines)
-        width = min(widest + 60, int(self.root.winfo_screenwidth() * .75))
-        height = min(character.metrics("linespace") * (len(lines) + 2) + 80,
-                     int(self.root.winfo_screenheight() * .8))
-        left = self.root.winfo_rootx() + max(0, (self.root.winfo_width() - width) // 2)
-        top = self.root.winfo_rooty() + 40
+        rows = max(len(part) for part in parts)
+        screen_width, screen_height = window.winfo_screenwidth(), window.winfo_screenheight()
+        width = min(2 * (widest + 40) + 40, int(screen_width * .95))
+        height = min(character.metrics("linespace") * (rows + 1) + 80,
+                     int(screen_height * .84))
+        # Auf dem Bildschirm halten: Ein zweispaltiges Fenster ist breit genug,
+        # dass es mittig unter einem weit rechts stehenden Hauptfenster sonst
+        # über den Rand ragt.
+        left = min(max(self.root.winfo_rootx() + (self.root.winfo_width() - width) // 2, 0),
+                   max(screen_width - width, 0))
+        top = min(max(self.root.winfo_rooty() + 40, 0), max(screen_height - height - 40, 0))
         window.geometry(f"{int(width)}x{int(height)}+{int(left)}+{int(top)}")
         window.minsize(420, 240)
 
         # Escape schließt – ohne das bliebe das Fenster stehen, sobald die
         # Schaltfläche einmal nicht sichtbar ist.
         window.bind("<Escape>", lambda _event: window.destroy())
-        view.bind("<Escape>", lambda _event: window.destroy())
+        first.bind("<Escape>", lambda _event: window.destroy())
         window.protocol("WM_DELETE_WINDOW", window.destroy)
         # `focus_force` statt `focus_set`: Ohne zugeteilten Tastaturfokus kommt
         # kein Tastendruck an, und Escape bliebe wirkungslos, bis jemand ins
         # Fenster klickt.
         window.focus_force()
-        view.focus_set()
+        first.focus_set()
         window.grab_set()
 
     def instructions(self) -> None:
-        self._show_manual(
+        self._show_manual(self.manual_text())
+
+    @staticmethod
+    def manual_text() -> str:
+        """Der Text der Bedienungsanleitung, getrennt von seiner Darstellung."""
+        return (
             "Ablauf\n"
-            "1. 'Anzahl Verfahren' legt fest, wie viele Slots aktiv sind (2 bis 4,\n"
-            f"   Standard {DEFAULT_SLOT_COUNT}: PPO, TD3 und SAC je einmal). Gern auch\n"
-            "   mehrfach denselben Algorithmus, um Parametrisierungen zu vergleichen.\n"
+            "1. 'Anzahl Verfahren': wie viele Slots aktiv sind (2 bis 4, Standard\n"
+            f"   {DEFAULT_SLOT_COUNT} = PPO, TD3 und SAC). Gern auch mehrfach derselbe Algorithmus,\n"
+            "   um Parametrisierungen zu vergleichen.\n"
             "2. Im jeweiligen Tab die Parameter setzen. Der sichtbare Tab ist das aktive\n"
             "   Verfahren; 'Training' und 'Zurücksetzen' wirken darauf.\n"
             "3. 'Training starten / fortsetzen' trainiert das aktive Verfahren,\n"
-            "   'Vergleich starten / fortsetzen' alle aktiven Slots parallel.\n\n"
+            "   'Vergleich starten / fortsetzen' alle aktiven Slots parallel.\n"
+            "\n"
             "Budget: zwei Grenzen\n"
             "Jeder Slot führt 'Trainingsschritte N' UND 'Episoden E'. Der Lauf endet an\n"
             "der zuerst erreichten; die Summary zeigt unter 'Ende durch', welche es war.\n"
             "'Episoden E = 0' heißt unbegrenzt, dann zählt allein das Schrittbudget.\n"
-            "Beide Grenzen gelten RELATIV: Ein zweiter Druck auf 'Training fortsetzen'\n"
-            "setzt nichts zurück, sondern hängt erneut das volle Budget an – Kurve und\n"
-            "Summary wachsen weiter.\n"
-            "Warum beides: Eine Episode endet beim Sturz. Untrainiert fällt die Figur\n"
-            "nach rund 25 Schritten, mit Lernfortschritt werden Episoden länger. 1000\n"
-            "Episoden sind deshalb mal 25.000, mal 1.000.000 Schritte. Für einen FAIREN\n"
-            "Vergleich ist das Schrittbudget die richtige Grenze: Das Verfahren, das\n"
-            "besser lernt, bekäme bei gleicher Episodenzahl sonst mehr Trainingsdaten.\n\n"
+            "Beide Grenzen gelten RELATIV: Ein zweiter Druck auf 'fortsetzen' setzt nichts\n"
+            "zurück, sondern hängt das volle Budget erneut an.\n"
+            "Warum beides: Eine Episode endet beim Sturz, untrainiert nach rund 25\n"
+            "Schritten, später deutlich später – 1000 Episoden sind mal 25.000, mal\n"
+            "1.000.000 Schritte. Fair vergleicht allein das Schrittbudget: Sonst bekäme\n"
+            "das Verfahren, das besser lernt, mehr Trainingsdaten.\n"
+            "\n"
             "Environment\n"
             "Humanoid-v5 (MuJoCo): eine dreidimensionale Figur von 42 kg mit 17 Gelenken\n"
-            "und 348 Beobachtungswerten. Der Wertebereich der Actions ist ±0,4 – NICHT\n"
-            "±1 wie in den Vorgängerprojekten. Die Übersetzungen unterscheiden sich stark\n"
-            "(25 an den Armen bis 300 an der Hüfte), derselbe Actionwert bedeutet je\n"
-            "Gelenk ein anderes Moment.\n"
+            "und 348 Beobachtungswerten. Der Wertebereich der Actions ist ±0,4 – NICHT ±1\n"
+            "wie in den Vorgängerprojekten. Die Übersetzungen reichen von 25 an den Armen\n"
+            "bis 300 an der Hüfte: derselbe Actionwert, je Gelenk ein anderes Moment.\n"
             "Reward = 5,0 (Überleben) + 1,25·vₓ - 0,1·Σaᵢ² - 5e-7·Σcfrc².\n"
-            "Der Überlebensbonus DOMINIERT: Eine Figur, die 1000 Schritte nur steht,\n"
-            "sammelt bereits 5000 Return.\n"
-            "Die Episode endet mit einem STURZ, sobald die Rumpfhöhe den Bereich\n"
-            "1,0 bis 2,0 m verlässt – eine Winkelbedingung gibt es nicht, die Figur darf\n"
-            f"beliebig verdreht sein. Sonst nach {MAX_EPISODE_STEPS} Schritten\n"
-            "('durchgehalten'). Weder Bonus noch Strafe am Ende; ein Sturz kostet nur\n"
-            "die Rewards der Schritte, die nicht mehr stattfinden.\n"
-            f"Die Zielmarke {german(TARGET_RETURN, 0)} ist PROJEKTINTERN gesetzt und\n"
-            f"entspricht {MAX_EPISODE_STEPS} Schritten aufrecht. Humanoid-v5 führt keinen\n"
-            "offiziellen reward_threshold – 'gelöst' gibt es hier nicht.\n\n"
+            "Der Überlebensbonus DOMINIERT: 1000 Schritte nur stehen ergeben 5000.\n"
+            "Die Episode endet mit einem STURZ, sobald die Rumpfhöhe den Bereich 1,0 bis\n"
+            "2,0 m verlässt – eine Winkelbedingung gibt es nicht, die Figur darf beliebig\n"
+            f"verdreht sein. Sonst nach {MAX_EPISODE_STEPS} Schritten ('durchgehalten'). Weder Bonus\n"
+            "noch Strafe am Ende: Ein Sturz kostet nur die Rewards der Schritte, die nicht\n"
+            "mehr stattfinden.\n"
+            f"Die Zielmarke {german(TARGET_RETURN, 0)} ist PROJEKTINTERN und entspricht {MAX_EPISODE_STEPS} Schritten\n"
+            "aufrecht; einen offiziellen reward_threshold führt Humanoid-v5 nicht.\n"
+            "\n"
             "Methoden\n"
             "PPO ist on-policy: Rollouts, GAE, geclipptes Ziel, kein Replay Buffer.\n"
             "SAC und TD3 sind off-policy mit zwei Critics – TD3 mit deterministischem\n"
             "Actor und Action Noise, SAC mit stochastischem Actor und gelernter Entropie.\n"
             "Bei gleichem Schrittbudget bevorteilt der Vergleich die Off-Policy-Verfahren:\n"
             "Sie lernen aus jedem gespeicherten Übergang mehrfach, PPO verwirft seine\n"
-            "Daten nach jedem Update. Hinzu kommt, dass die Profile für verschieden lange\n"
-            f"Läufe getunt sind – {thousands(DEFAULT_TOTAL_TIMESTEPS)} Schritte sind bei PPO\n"
-            "5 % seines Profilbudgets, bei TD3 und SAC je 25 %.\n\n"
+            "Daten nach jedem Update. Dazu sind die Profile für verschieden lange Läufe\n"
+            "getunt: Die 300.000 Schritte der Messläufe sind bei PPO 3 % des\n"
+            "Profilbudgets, bei TD3 und SAC je 15 %.\n"
+            "\n"
             "Diagramme\n"
             "'Training' zeigt das aktive Verfahren, 'Vergleich' alle Slots gemeinsam,\n"
-            "'Einzelverfahren' genau einen wählbaren Slot – auch nach einem Vergleichs-\n"
-            "lauf, ohne neu zu trainieren. Die Kurven sind durchgezogen und farbig nach\n"
-            "Slot: V1 blau, V2 rot, V3 gelb, V4 grün; die weiße gestrichelte Linie ist\n"
-            "die Zielmarke. Die Y-Achse folgt den MESSWERTEN, nicht der Marke – sonst\n"
-            "drückte diese alle Kurven in einen Bruchteil der Bildhöhe.\n"
+            "'Einzelverfahren' genau einen wählbaren Slot – auch nach einem Vergleichslauf,\n"
+            "ohne neu zu trainieren. Farbig nach Slot: V1 blau, V2 rot, V3 gelb, V4 grün;\n"
+            "die weiße gestrichelte Linie ist die Zielmarke.\n"
+            "Die Y-Achse folgt den MESSWERTEN, nicht der Marke – sonst drückte diese alle\n"
+            "Kurven in einen Bruchteil der Bildhöhe.\n"
             "'Glättung' rechts in der Tableiste stellt ein, über wie viele Episoden der\n"
-            "gleitende Durchschnitt mittelt – global für alle Slots und alle Graphen,\n"
-            "sofort wirksam, auch mitten im Lauf. Dieselbe Zahl bestimmt, über wie viele\n"
-            "Episoden die Summary mittelt.\n"
+            "gleitende Durchschnitt mittelt – global, sofort wirksam, auch mitten im Lauf;\n"
+            "dieselbe Zahl bestimmt, worüber die Summary mittelt.\n"
             "Export: 'PNG exportieren' sichert das sichtbare Diagramm, 'TXT exportieren'\n"
-            "die Summary, 'Je Verfahren PNG' schreibt in einer Aktion je aktivem Slot\n"
-            "eine eigene Datei – für Berichte, die einen Plot je Verfahren verlangen.\n\n"
+            "die Summary, 'Je Verfahren PNG' je aktivem Slot eine eigene Datei.\n"
+            "\n"
             "Summary\n"
             "Oben Umfang und Ausgang des Laufs, darunter – abgetrennt durch eine fett\n"
             "gesetzte Zwischenüberschrift – alle Mittelwerte über die LETZTEN Episoden\n"
             "(Fenster wie die Glättung). Über den ganzen Lauf gemittelt hinge jede\n"
-            "Kennzahl noch am untrainierten Anfang. 'Beste Episode' zählt dagegen über\n"
-            "alle Episoden.\n"
+            "Kennzahl noch am untrainierten Anfang; 'Beste Episode' zählt über alle.\n"
             "Der Block 'Unterschiede' erscheint nur, wenn ein Algorithmus mehrere Slots\n"
-            "belegt – also bei einer Parameterstudie. Bei lauter verschiedenen Verfahren\n"
-            "sagt die Kopfzeile bereits alles.\n\n"
+            "belegt – also bei einer Parameterstudie.\n"
+            "\n"
             "Animation\n"
-            "Neben jedem Verfahren steht unter der Ueberschrift 'Animation' ein Feld\n"
-            "mit vier Moeglichkeiten. 'akt. Ep.' zeigt den laufenden Lernstand.\n"
-            "'inaktiv' blendet diese eine Anzeige aus – die uebrigen bekommen ihren\n"
-            "Platz und werden groesser. Einen globalen Schalter 'Animation zeigen'\n"
-            "gibt es nicht mehr: Alle Felder auf 'inaktiv' zu stellen ist dasselbe.\n"
-            "'beste Ep.' spielt die bisher beste Episode EXAKT nach. Aufgezeichnet werden\n"
-            "der Simulatorzustand zu ihrem Beginn und jede ausgefuehrte Action; die\n"
-            "Wiedergabe setzt den Zustand und spielt die Actions ab. Bewegung und\n"
+            "Das Feld 'Animation' neben jedem Verfahren hat vier Möglichkeiten und wirkt\n"
+            "jederzeit, auch im laufenden Lauf. 'akt. Ep.' zeigt den laufenden Lernstand,\n"
+            "'inaktiv' blendet diese eine Anzeige aus – die übrigen bekommen ihren Platz\n"
+            "und werden größer. Einen globalen Schalter gibt es nicht: Alle Felder auf\n"
+            "'inaktiv' ist dasselbe.\n"
+            "'beste Ep.' spielt die bisher beste Episode EXAKT nach. Aufgezeichnet\n"
+            "werden der Simulatorzustand zu ihrem Beginn und jede ausgeführte Action;\n"
+            "die Wiedergabe setzt den Zustand und spielt die Actions ab. Bewegung und\n"
             "Return sind damit identisch mit der Trainingsepisode. Ein '*' hinter der\n"
-            "Nummer macht kenntlich, dass nicht der aktuelle Stand laeuft.\n"
-            "'beste Pol.' laesst stattdessen den Lernstand dieser Episode determi-\n"
-            "nistisch laufen. Das erreicht nur 80 bis 91 % des Returns, beantwortet\n"
-            "aber die andere Frage: nicht 'was ist damals passiert', sondern 'wie gut\n"
-            "ist dieser Stand ohne das Glueck explorativer Zuege'. Der Abstand zwischen\n"
-            "beiden misst, wie viel des Spitzenwerts Zufall war.\n"
-            "Die Anzeigen ordnen sich nach der Form des Bereichs - gewaehlt wird die\n"
-            "Aufteilung, die das groesste Bild ergibt.\n"
+            "Nummer macht kenntlich, dass nicht der aktuelle Stand läuft.\n"
+            "'beste Pol.' lässt stattdessen den Lernstand dieser Episode deterministisch\n"
+            "laufen – nur 80 bis 91 % des Returns, aber die andere Frage: nicht 'was ist\n"
+            "damals passiert', sondern 'wie gut ist dieser Stand ohne Explorationsglück'.\n"
+            "Die Anzeigen ordnen sich nach der Form des Bereichs – gewählt wird die\n"
+            "Aufteilung, die das größte Bild ergibt. Jede läuft in einem eigenen\n"
+            f"Renderprozess, das kostet Rechenzeit. Die Bildrate (Standard {DEFAULT_ANIMATION_FPS} FPS) ist\n"
+            f"eine Obergrenze; environment-eigen wären {RENDER_FPS} FPS, die Anzeige läuft\n"
+            "also in etwa dreifacher Zeitlupe – ein stürzender Humanoid ist sonst kaum\n"
+            "zu verfolgen.\n"
             "Unter jedem Bild stehen nur Episode, Schritt und Return. Alle weiteren\n"
             "Messwerte – die 17 Actions mit ihrer Übersetzung, Rumpfhöhe und Neigung,\n"
-            "Gelenkwinkel, Geschwindigkeiten und die Zerlegung des Rewards in seine vier\n"
-            "Anteile – erscheinen erst, wenn der Mauszeiger über dem Bild steht; sie\n"
-            "werden dann NEBEN dem Bild eingeblendet, sodass beides sichtbar bleibt.\n"
-            "Von den 348 Observationswerten zeigt die Einblendung eine Auswahl; die\n"
-            "286 Werte aus cinert, cvel und cfrc_ext erklären kein Verhalten und\n"
-            "erscheinen nur verdichtet als Quadratsumme der Kontaktkräfte.\n"
-            "'Animation zeigen' wirkt jederzeit, auch im laufenden Lauf, und zeigt alle\n"
-            "aktiven Verfahren gleichzeitig – jedes in einem eigenen Renderprozess. Das\n"
-            f"kostet Rechenzeit. Die Bildrate (Standard {DEFAULT_ANIMATION_FPS} FPS) ist eine\n"
-            f"Obergrenze; die environment-eigene Rate wäre {RENDER_FPS} FPS, bei {DEFAULT_ANIMATION_FPS}\n"
-            "läuft die Anzeige also in etwa dreifacher Zeitlupe – ein stürzender\n"
-            "Humanoid ist sonst kaum zu verfolgen.\n\n"
+            "Gelenkwinkel, Geschwindigkeiten und die vier Reward-Anteile – erscheinen\n"
+            "NEBEN dem Bild, sobald der Mauszeiger darüber steht. Von den 348\n"
+            "Observationswerten zeigt sie eine Auswahl; die 286 aus cinert, cvel und\n"
+            "cfrc_ext erklären kein Verhalten und erscheinen nur als Quadratsumme.\n"
+            "\n"
             "Laufzeit und Speicher\n"
-            f"Die Voreinstellung {thousands(DEFAULT_TOTAL_TIMESTEPS)} Schritte passt zur Vorgabe von 1000\n"
-            "Episoden: Gemessen entsprechen diese bei SAC rund 80.000 Schritten, beide\n"
-            f"Grenzen liegen also in derselben Größenordnung. Die Messläufe für den Bericht\n"
-            f"nutzen {thousands(REPORT_TIMESTEPS)} Schritte bei 'Episoden E = 0'. Auch das liegt UNTER\n"
-            "den Zoo-Profilen (PPO 10 Mio., TD3/SAC je 2 Mio.). Die Figur wird damit\n"
-            "NICHT laufen; erwartbar ist, dass sie sich zunehmend länger hält.\n"
+            f"Die Voreinstellung {thousands(DEFAULT_TOTAL_TIMESTEPS)} Schritte passt zur Vorgabe von 1000 Episoden:\n"
+            "Gemessen entsprechen diese bei SAC rund 80.000 Schritten. Die Messläufe für\n"
+            "den Bericht nutzen rund 300.000 Schritte bei 'Episoden E = 0' – auch\n"
+            "das liegt UNTER den Zoo-Profilen (PPO 10 Mio., TD3/SAC je 2 Mio.). Die Figur\n"
+            "wird damit NICHT laufen, erwartbar ist zunehmend längeres Durchhalten.\n"
             "Gemessen: PPO rund 480 Schritte/s, TD3 und SAC rund 50 – ein voller Lauf\n"
-            "dauert bei den Off-Policy-Verfahren also Stunden.\n"
-            f"'Threads (PyTorch)' (Standard {DEFAULT_TORCH_THREADS}) steht neben 'Anzahl\n"
-            "Verfahren', weil beide zusammenhängen: Es bestimmt, über wie viele Kerne\n"
+            "dauert bei den Off-Policy-Verfahren also Stunden. Über 100.000 Schritte\n"
+            "fragt die Anwendung vorher nach und nennt die erwartete Dauer.\n"
+            f"'Threads (PyTorch)' (Standard {DEFAULT_TORCH_THREADS}) bestimmt, über wie viele Kerne\n"
             "PyTorch EINE Matrixmultiplikation verteilt – nicht, wie viele Verfahren\n"
             "gleichzeitig laufen. Ein Vergleich führt seine Slots als Threads EINES\n"
-            "Prozesses aus; alle teilen sich denselben Pool. Die Einstellung gilt also\n"
-            "für die ganze Anwendung, nicht je Lauf, und wird beim Start eines Laufs\n"
-            "übernommen. Von den 6 Kernen sind nur 2 Performance-Kerne; nimmt PyTorch\n"
-            "alle sechs, warten die schnellen Threads auf die langsamen – Faktor 3.\n"
-            "Jeder Off-Policy-Slot belegt mit dem Standardbuffer rund 1,3 GB.\n\n"
+            "Prozesses aus, alle teilen sich denselben Pool; die Einstellung gilt für die\n"
+            "ganze Anwendung und wird beim Start eines Laufs übernommen. Von den 6 Kernen\n"
+            "sind nur 2 Performance-Kerne; nimmt PyTorch alle sechs, warten die schnellen\n"
+            "Threads auf die langsamen – Faktor 3.\n"
+            "Jeder Off-Policy-Slot belegt mit dem Standardbuffer rund 1,3 GB.\n"
+            "\n"
             "Kein Lernerfolg?\n"
             "Zu kurzes Budget, zu großer Lernstart t₀, zu kleines Action Noise bei TD3,\n"
             "eine zu hohe Lernrate oder bei PPO fehlende Normalisierung. Zur Einordnung:\n"

@@ -23,12 +23,16 @@ from humanoid_gui import (
     DEFAULT_SLOT_COUNT,
     MAX_ANIMATION_FPS,
     MAX_SLOTS,
+    MIN_CHART_HEIGHT,
+    duration_text,
+    estimated_seconds,
     EPISODE_CHOICES,
     BEST_POLICY,
     INACTIVE_EPISODE,
     MAX_PLOT_POINTS,
     SELECTION_ROW_OFFSET,
     best_columns,
+    manual_split,
     MIN_ANIMATION_FPS,
     PARAMETER_GROUPS,
     REFERENCE_COLOR,
@@ -280,6 +284,32 @@ class LayoutSmokeTest(GUITestCase):
         self.app._initialize_layout()
         self.root.update()
         self.assertEqual(self.app.layout_visibility_issues(), [])
+
+    def test_the_lower_half_gets_every_spare_pixel(self):
+        """Der Teiler steht genau auf der Hoehe des Bedienpanels: kein Pixel
+        weniger, sonst waere es abgeschnitten, und keiner mehr, denn oben
+        zeigte er nur Hintergrund."""
+        self.app._initialize_layout()
+        self.root.update()
+        benoetigt = max(kind.winfo_y() + kind.winfo_reqheight()
+                        for kind in self.app.controls.winfo_children()) + 10
+        verfuegbar = self.app.splitter.winfo_height()
+        self.assertEqual(self.app.splitter.sashpos(0),
+                         min(benoetigt, verfuegbar - MIN_CHART_HEIGHT))
+
+    def test_spare_height_goes_to_the_charts(self):
+        """Waechst das Fenster, waechst der untere Bereich - nicht der leere
+        Rand ueber dem Bedienpanel. Von sich aus teilt ein Panedwindow die
+        gewonnene Hoehe auf beide Bereiche auf."""
+        self.app._initialize_layout()
+        self.root.update()
+        teiler = self.app.splitter.sashpos(0)
+        vorher = self.app.splitter.winfo_height() - teiler
+        self.root.geometry(f"{self.root.winfo_width()}x{self.root.winfo_height() + 120}")
+        self.root.update()
+        gewachsen = self.app.splitter.winfo_height() - self.app.splitter.sashpos(0)
+        self.assertEqual(self.app.splitter.sashpos(0), teiler)
+        self.assertGreater(gewachsen, vorher)
 
     def test_every_tab_of_every_slot_count_is_fully_visible(self):
         for count in SLOT_COUNTS:
@@ -542,6 +572,70 @@ class PlotTests(GUITestCase):
         self.assertIn("Soft-Update τ", self.app._series_label(0, configs))
         self.assertIn("0.005", self.app._series_label(0, configs))
         self.assertIn("0.05", self.app._series_label(1, configs))
+
+
+class LongRunHintTests(GUITestCase):
+    """Ein Fehlgriff kostet hier Stunden - vor einem langen Lauf nennt die
+    Oberflaeche die erwartete Dauer."""
+
+    def test_the_default_budget_starts_without_a_question(self):
+        konfigurationen = [self.app._config(0)]
+        self.assertEqual(konfigurationen[0].total_timesteps, DEFAULT_TOTAL_TIMESTEPS)
+        with patch("humanoid_gui.messagebox.askyesno") as frage:
+            self.assertTrue(self.app._confirm_long_run(konfigurationen))
+        frage.assert_not_called()
+
+    def test_a_long_run_names_its_duration(self):
+        self.app.algorithm_vars[0].set("SAC")
+        self.app._algorithm_changed(0)
+        self.app.values[0]["total_timesteps"].set("500000")
+        konfigurationen = [self.app._config(0)]
+        with patch("humanoid_gui.messagebox.askyesno", return_value=False) as frage:
+            self.assertFalse(self.app._confirm_long_run(konfigurationen))
+        text = frage.call_args.args[1]
+        self.assertIn("500.000", text)
+        # 500.000 Schritte bei gemessenen 50 Schritten/s sind 2,8 Stunden.
+        self.assertIn("2,8 h", text)
+
+    def test_the_slowest_slot_sets_the_estimate(self):
+        """PPO rechnet zehnmal schneller als die Off-Policy-Verfahren - genannt
+        wird der Slot, auf den man wartet."""
+        self.assertGreater(estimated_seconds("SAC", 500_000),
+                           estimated_seconds("PPO", 500_000))
+        self.assertEqual(duration_text(estimated_seconds("PPO", 500_000)), "rund 17 min")
+
+    def test_several_slots_are_named_as_taking_longer(self):
+        konfigurationen = [dataclasses.replace(self.app._config(0), total_timesteps=500_000)
+                           for _ in range(3)]
+        with patch("humanoid_gui.messagebox.askyesno", return_value=True) as frage:
+            self.assertTrue(self.app._confirm_long_run(konfigurationen))
+        self.assertIn("teilen sich die Kerne", frage.call_args.args[1])
+
+
+class SummaryScrollbarTests(GUITestCase):
+    @staticmethod
+    def _bars(app) -> list:
+        return [widget for widget in app.summary_text.master.winfo_children()
+                if isinstance(widget, ttk.Scrollbar)]
+
+    def test_no_scrollbars_while_everything_fits(self):
+        """Eine Leiste, die nichts zu schieben hat, kostet nur Platz."""
+        self.app.summary_text.configure(state="normal")
+        self.app.summary_text.delete("1.0", "end")
+        self.app.summary_text.insert("1.0", "kurz\n")
+        self.app.summary_text.configure(state="disabled")
+        self.root.update()
+        for bar in self._bars(self.app):
+            self.assertFalse(bar.winfo_ismapped(), bar.cget("orient"))
+
+    def test_scrollbars_return_when_the_table_grows(self):
+        self.app.summary_text.configure(state="normal")
+        self.app.summary_text.delete("1.0", "end")
+        self.app.summary_text.insert("1.0", ("x" * 400 + "\n") * 80)
+        self.app.summary_text.configure(state="disabled")
+        self.root.update()
+        for bar in self._bars(self.app):
+            self.assertTrue(bar.winfo_ismapped(), bar.cget("orient"))
 
 
 class SummaryTests(GUITestCase):
@@ -1349,6 +1443,51 @@ class ManualWindowTests(GUITestCase):
             self.assertTrue(self._scrollbars_of(window))
         finally:
             window.destroy()
+
+    def test_the_manual_stands_in_two_columns(self):
+        """Einspaltig ist der Text doppelt so hoch wie der Bildschirm. Die
+        Spalten teilen ihn ohne Verlust und an einer Kapitelgrenze."""
+        window = self._open()
+        try:
+            texte = [widget for frame in window.winfo_children()
+                     for widget in frame.winfo_children() if isinstance(widget, tk.Text)]
+            self.assertEqual(len(texte), 2)
+            teile = [view.get("1.0", "end-1c").split("\n") for view in texte]
+            self.assertEqual(len(teile[0]) + len(teile[1]) + 1,
+                             len(self.app.manual_text().split("\n")))
+            # Jede Spalte beginnt mit einer Kapitelueberschrift.
+            for teil in teile:
+                self.assertTrue(teil[0].strip())
+                self.assertFalse(teil[0].startswith(" "))
+                self.assertLess(len(teil[0]), 40)
+        finally:
+            window.destroy()
+
+    def test_the_manual_needs_no_scrolling_on_this_screen(self):
+        """Zweispaltig und gekuerzt passt die Anleitung ohne Scrollen; sonst
+        haette das Kuerzen seinen Zweck verfehlt."""
+        window = self._open()
+        try:
+            for bar in self._scrollbars_of(window):
+                self.assertFalse(bar.winfo_ismapped(),
+                                 f"{bar.cget('orient')}: Leiste trotz passendem Inhalt sichtbar")
+        finally:
+            window.destroy()
+
+    def test_a_cramped_manual_shows_its_scrollbars_again(self):
+        window = self._open()
+        try:
+            window.geometry("420x240")
+            self.root.update()
+            self.assertTrue(any(bar.winfo_ismapped() for bar in self._scrollbars_of(window)))
+        finally:
+            window.destroy()
+
+    def test_the_split_balances_the_two_columns(self):
+        zeilen = ["Kapitel"] + ["Zeile"] * 8 + [""] + ["Zweites"] + ["Zeile"] * 3
+        self.assertEqual(manual_split(zeilen), 9)
+        # Ohne Leerzeile bleibt nur die Mitte.
+        self.assertEqual(manual_split(["Zeile"] * 6), 3)
 
 
 class SelectionHeadingTests(GUITestCase):
