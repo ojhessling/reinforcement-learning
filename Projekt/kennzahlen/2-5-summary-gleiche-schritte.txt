@@ -1,0 +1,128 @@
+Statistik            Verfahren 1     Verfahren 2     Verfahren 3
+────────────────────────────────────────────────────────────────
+Algorithmus                  SAC          CrossQ             TQC
+Episoden                   2.023           1.604           1.876
+Schritte                 300.000         300.000         300.000
+Budget N/E           300.000 / ∞     300.000 / ∞     300.000 / ∞
+Ende durch         Schrittbudget   Schrittbudget   Schrittbudget
+Beste Episode     #1971: 5.150,1  #1595: 6.680,4  #1874: 5.105,4
+Ø der letzten 50 Episoden
+Return                   2.893,0         4.434,6         3.975,9
+Länge                        578             699             795
+Tempo m/s                   0,21            1,06            0,23
+Strecke x m                  2,1            14,0             2,6
+seitlich m                  0,60            1,29            0,54
+Sturzquote                 80,0%           36,0%           46,0%
+Durchhaltequote            20,0%           64,0%           54,0%
+Zielquote                  14,0%           64,0%           20,0%
+
+Zielmarke 5.000 = 1000 Schritte aufrecht, Durchhalten = 1000 Schritte erreicht
+
+Konfiguration:
+[Verfahren 1]
+algorithm: SAC
+total_timesteps: 300000
+episodes: 0
+learning_rate: 0.0003
+learning_rate_schedule: konstant
+batch_size: 256
+gamma: 0.99
+seed: 0
+actor_arch: (256, 256)
+critic_arch: (256, 256)
+activation: ReLU
+optimizer: Adam
+optimizer_eps: 1e-08
+optimizer_weight_decay: 0.0
+log_std_init: 0.0
+use_sde: False
+sde_sample_freq: -1
+buffer_size: 500000
+learning_starts: 10000
+tau: 0.005
+train_freq: 1
+gradient_steps: 1
+action_noise: keins
+action_noise_sigma: 0.1
+ent_coef_mode: auto
+ent_coef_value: 1.0
+target_entropy: auto
+target_update_interval: 1
+normalize_obs: False
+normalize_reward: False
+clip_obs: 10.0
+clip_reward: 10.0
+
+[Verfahren 2]
+algorithm: CrossQ
+total_timesteps: 300000
+episodes: 0
+learning_rate: 0.001
+learning_rate_schedule: konstant
+batch_size: 256
+gamma: 0.99
+seed: 0
+actor_arch: (256, 256)
+critic_arch: (1024, 1024)
+activation: ReLU
+optimizer: Adam
+optimizer_eps: 1e-08
+optimizer_weight_decay: 0.0
+log_std_init: -3.0
+use_sde: False
+sde_sample_freq: -1
+buffer_size: 500000
+learning_starts: 10000
+train_freq: 1
+gradient_steps: 1
+action_noise: keins
+action_noise_sigma: 0.1
+policy_delay: 3
+ent_coef_mode: auto
+ent_coef_value: 1.0
+target_entropy: auto
+batch_norm_momentum: 0.01
+renorm_warmup_steps: 100000
+normalize_obs: False
+normalize_reward: False
+clip_obs: 10.0
+clip_reward: 10.0
+
+[Verfahren 3]
+algorithm: TQC
+total_timesteps: 300000
+episodes: 0
+learning_rate: 0.0003
+learning_rate_schedule: konstant
+batch_size: 256
+gamma: 0.99
+seed: 0
+actor_arch: (256, 256)
+critic_arch: (256, 256)
+activation: ReLU
+optimizer: Adam
+optimizer_eps: 1e-08
+optimizer_weight_decay: 0.0
+log_std_init: -3.0
+use_sde: False
+sde_sample_freq: -1
+buffer_size: 500000
+learning_starts: 10000
+tau: 0.005
+train_freq: 1
+gradient_steps: 1
+action_noise: keins
+action_noise_sigma: 0.1
+ent_coef_mode: auto
+ent_coef_value: 1.0
+target_entropy: auto
+target_update_interval: 1
+n_quantiles: 25
+top_quantiles_to_drop: 2
+normalize_obs: False
+normalize_reward: False
+clip_obs: 10.0
+clip_reward: 10.0
+
+slot_count: 3
+smoothing_window: 50

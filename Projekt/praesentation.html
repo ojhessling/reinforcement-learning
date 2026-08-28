@@ -1,0 +1,499 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Humanoid-v5 – PPO, TD3 und SAC</title><style>
+* { box-sizing: border-box; }
+body { margin: 0; background: #05070d; color: #e2e8f0; overflow: hidden;
+       font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; }
+.folie { display: none; position: absolute; inset: 0; padding: 3.2vh 4vw 5vh;
+         flex-direction: column; justify-content: flex-start; }
+/* Alle Überschriften auf derselben Höhe: Der Inhalt beginnt oben, und was
+   darunter wachsen darf, füllt den Rest. Bei zentriertem Inhalt sprang die
+   Überschrift von Folie zu Folie. */
+.folie > h1:first-child { flex: 0 0 auto; min-height: 7vh; }
+.folie.aktiv { display: flex; }
+h1 { font-size: 3.6vh; margin: 0 0 1.6vh; color: #fff; line-height: 1.15; }
+h2 { font-size: 2.6vh; margin: 0 0 1.6vh; color: #93c5fd; font-weight: 600; }
+h3 { font-size: 2.4vh; margin: 1.8vh 0 0.8vh; color: #fbbf24; }
+p, li { font-size: 2.05vh; line-height: 1.5; margin: 0.5vh 0; }
+ul { margin: 0.8vh 0; padding-left: 3vh; }
+li { margin: 0.9vh 0; }
+strong { color: #fbbf24; }
+h1 strong, h3 strong, figcaption strong { color: #fbbf24; }
+code { font-family: "SF Mono", Menlo, monospace; font-size: 0.94em;
+       background: #16203a; padding: 0.1em 0.35em; border-radius: 3px; color: #bfdbfe; }
+pre { background: #0f172a; border: 1px solid #1e293b; border-radius: 6px;
+      padding: 1.6vh 2vh; overflow-x: auto; }
+pre code { background: none; font-size: 1.9vh; line-height: 1.5; color: #e2e8f0; }
+blockquote { margin: 1.4vh 0; padding: 0.6vh 0 0.6vh 2vh; border-left: 3px solid #fbbf24;
+             color: #cbd5e1; font-size: 1.95vh; }
+table { border-collapse: collapse; width: 100%; margin: 1.2vh 0; font-size: 1.95vh; }
+th, td { border: 1px solid #1e293b; padding: 0.7vh 1.1vh; text-align: left; }
+th { background: #111c33; color: #cbd5e1; font-weight: 600; }
+td strong, th strong { color: #fbbf24; }
+tr:nth-child(even) td { background: #0a1122; }
+img, video { max-width: 100%; object-fit: contain; display: block;
+            margin: 0.8vh auto; border-radius: 4px; }
+video { background: #000; }
+
+/* Abbildungen nehmen den Platz, den Text und Tabellen übrig lassen: Der Absatz,
+   der nur ein Bild oder Video enthält, wächst in die freie Höhe, das Medium
+   füllt ihn aus. Ohne das blieb auf textarmen Folien ein Drittel leer. */
+.folie > p:has(> img:only-child), .folie > p:has(> video:only-child),
+.zwei > div > p:has(> img:only-child), .zwei > div > p:has(> video:only-child) {
+  flex: 1 1 auto; min-height: 0; display: flex; align-items: center;
+  justify-content: center; margin: 0.6vh 0; }
+/* `width` statt nur `max-width`: Ohne das bleiben die Diagramme bei ihren
+   nativen 975 px stehen, weil CSS Bilder nie über die Originalgröße hinaus
+   vergrößert. Die Deckelung bei 1500 px hält die Skalierung unter 1,6-fach,
+   darüber würde die Beschriftung der Achsen weich. */
+.folie > p > img, .folie > p > video,
+.zwei > div > p > img, .zwei > div > p > video {
+  width: 100%; max-width: 1500px; height: 100%; max-height: 100%;
+  object-fit: contain; margin: 0; }
+.folie > video { max-height: 62vh; }
+
+.zwei { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5vw;
+        align-items: center; flex: 1 1 auto; min-height: 0; }
+.zwei > div { display: flex; flex-direction: column; justify-content: center;
+              min-height: 0; max-height: 100%; }
+.vier { display: grid; grid-template-columns: repeat(2, 1fr); grid-auto-rows: 1fr;
+        gap: 1vh 2vw; margin: 1vh 0; flex: 1 1 auto; min-height: 0; }
+.vier figure { margin: 0; display: flex; flex-direction: column; min-height: 0; }
+.vier video { flex: 1 1 auto; min-height: 0; width: 100%; height: 100%;
+              max-height: 100%; margin: 0; object-fit: contain; }
+figcaption { font-size: 1.7vh; color: #94a3b8; text-align: center; margin-top: 0.6vh;
+             line-height: 1.35; }
+.nummer { position: absolute; right: 2.5vw; bottom: 1.8vh; font-size: 1.6vh;
+          color: #475569; }
+</style></head><body><section class="folie"><h1>Eine Figur, die stehen bleiben soll</h1>
+<h2><code>Humanoid-v5</code> mit PPO, TD3 und SAC</h2>
+<video src="videos/animation-1-fruehphase-ep563-579.mp4" autoplay loop muted playsinline></video>
+
+<p><strong>Immer wieder von vorn</strong> · Oliver Hessling · Kurs D21195UYS</p><div class="nummer">1</div></section><section class="folie"><h1>Warum Humanoid schwer ist</h1>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Hopper</th>
+<th>HalfCheetah</th>
+<th>Walker2d</th>
+<th><strong>Humanoid</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Beobachtungswerte</td>
+<td>11</td>
+<td>17</td>
+<td>17</td>
+<td><strong>348</strong></td>
+</tr>
+<tr>
+<td>Gelenke</td>
+<td>3</td>
+<td>6</td>
+<td>6</td>
+<td><strong>17</strong></td>
+</tr>
+<tr>
+<td>Raum</td>
+<td>2D</td>
+<td>2D</td>
+<td>2D</td>
+<td><strong>3D</strong></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>348 Werte hinein, 17 Gelenkbefehle hinaus</strong> — 67-mal je Sekunde</li>
+<li>schon bei nur zehn Stufen je Gelenk wären das <strong>10¹⁷ Möglichkeiten</strong> je Schritt</li>
+<li>42 kg, die in <strong>drei</strong> Richtungen kippen — Hopper und HalfCheetah nur in einer Ebene</li>
+</ul><div class="nummer">2</div></section><section class="folie"><h1>Die Formel, die alles erklärt</h1>
+<pre><code class="language-text">Reward =    5,0      +  1,25 · vₓ   −  0,1 · Σaᵢ²  −  5e−7 · Σcfrc²
+         (Überleben)    (vorwärts)     (Steuerung)     (Aufprall)
+</code></pre>
+<h3>1000 Schritte nur stehen = <strong>5000 Return</strong></h3>
+<ul>
+<li>Überleben zahlt <strong>viermal</strong> besser als Laufen bei 1 m/s</li>
+<li>Zielmarke <strong>5000</strong> = 1000 Schritte aufrecht, projektintern gesetzt</li>
+<li><code>Humanoid-v5</code> hat <strong>keine</strong> offizielle Gelöst-Schwelle</li>
+</ul><div class="nummer">3</div></section><section class="folie"><h1>Die Workbench</h1>
+<p><img alt="Konfigurator" src="screenshots/screenshot-konfigurator.png" /></p>
+<ul>
+<li><strong>Konfigurator</strong> links: 2 bis 4 Verfahren, jeder Parameter einzeln · <strong>ausführender Teil</strong> rechts: Animation je Slot</li>
+<li>alle Slots trainieren <strong>gleichzeitig</strong>, Legende nennt automatisch den <strong>abweichenden Parameter</strong></li>
+</ul><div class="nummer">4</div></section><section class="folie"><h1>Was die Anwendung zeigt</h1>
+<p><img alt="Anzeige mit Einblendung" src="screenshots/screenshot-anzeige.png" /></p>
+<ul>
+<li>unter dem Bild nur <strong>Episode · Schritt · Return</strong> — alles Weitere erscheint beim Überfahren <strong>neben</strong> dem Bild</li>
+<li>17 Actions mit Moment, Rumpfhöhe, Neigung, Gelenkwinkel, alle vier <strong>Reward-Anteile einzeln</strong></li>
+<li>von 348 Werten eine <strong>begründete Auswahl</strong>: 286 davon erklären kein Verhalten</li>
+</ul><div class="nummer">5</div></section><section class="folie"><h1>Versuchsaufbau</h1>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Wert</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hyperparameter</td>
+<td><strong>RL Baselines3 Zoo</strong>, unverändert</td>
+</tr>
+<tr>
+<td>Budget</td>
+<td><strong>300.000 Schritte</strong> je Verfahren</td>
+</tr>
+<tr>
+<td>Episodengrenze</td>
+<td><strong>aus</strong> (<code>E = 0</code>)</td>
+</tr>
+<tr>
+<td>Durchgänge</td>
+<td><strong>zwei</strong>, Zufallsstart 0 und 1</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Schritte statt Episoden: Wer besser lernt, hat längere Episoden — und bekäme
+bei gleicher Episodenzahl <strong>mehr</strong> Daten.</p>
+</blockquote><div class="nummer">6</div></section><section class="folie"><h1>Der Vergleich</h1>
+<p><img alt="Durchgang 1" src="diagramme/2-2-vergleich-seed0.png" /></p>
+<p><img alt="Durchgang 2" src="diagramme/2-2-vergleich-seed1.png" /></p>
+<p><strong>SAC</strong> gelb · <strong>PPO</strong> blau · <strong>TD3</strong> rot — zwei Durchgänge, dasselbe Muster</p><div class="nummer">7</div></section><section class="folie"><h1>Die Zahlen</h1>
+<table>
+<thead>
+<tr>
+<th>Ø der letzten 20 Episoden</th>
+<th>PPO</th>
+<th>TD3</th>
+<th><strong>SAC</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Return, Mittel beider Durchgänge</td>
+<td>491,9</td>
+<td>407,3</td>
+<td><strong>2.711,6</strong></td>
+</tr>
+<tr>
+<td>Beste Einzelepisode</td>
+<td>1.313</td>
+<td>1.595</td>
+<td><strong>5.102</strong></td>
+</tr>
+<tr>
+<td>Ø Episodenlänge</td>
+<td>89 / 96</td>
+<td>39 / 134</td>
+<td><strong>434 / 651</strong></td>
+</tr>
+<tr>
+<td>1000 Schritte durchgehalten</td>
+<td>0 %</td>
+<td>0 %</td>
+<td><strong>15 / 40 %</strong></td>
+</tr>
+</tbody>
+</table>
+<h3>SAC gewinnt mit <strong>Faktor 5,5</strong></h3>
+<p>Der schlechtere SAC-Lauf schlägt den besseren PPO-Lauf noch um das Vierfache.</p><div class="nummer">8</div></section><section class="folie"><h1>Dieselben Parameter. Zwei Bilder.</h1>
+<p><img alt="TD3 Durchgang 1" src="diagramme/2-2-td3-seed0.png" /></p>
+<p><strong>Zufallsstart 0</strong> — 7.673 Episoden flach bei 172</p>
+<p><img alt="TD3 Durchgang 2" src="diagramme/2-2-td3-seed1.png" /></p>
+<p><strong>Zufallsstart 1</strong> — steigt auf 643, beste Episode 1.595</p>
+<h3>Aus einem Durchgang wäre eine falsche Aussage geworden</h3><div class="nummer">9</div></section><section class="folie"><h1>Warum SAC vorn liegt</h1>
+<ul>
+<li><strong>SAC</strong> off-policy: jeder Übergang wird mehrfach benutzt, Entropie regelt die Erkundung selbst</li>
+<li><strong>PPO</strong> verwirft seine Daten nach jedem Update — teuer bei 300.000 Schritten</li>
+<li><strong>TD3</strong> hat denselben Buffer, aber Lernrate <code>1e−3</code> — dreimal SAC</li>
+<li>Platz 2 bleibt <strong>offen</strong>: 85 Punkte Abstand gegen 471 Punkte Eigenstreuung von TD3</li>
+</ul><div class="nummer">10</div></section><section class="folie"><h1>War der Vergleich fair?</h1>
+<p><strong>Einwand:</strong> 300.000 Schritte sind bei PPO nur 3 % seines Profilbudgets, bei TD3 und SAC 15 %.</p>
+<p><img alt="PPO mit 1,5 Mio Schritten" src="diagramme/2-2-ppo-1500k-vergleich.png" /></p>
+<table>
+<thead>
+<tr>
+<th>PPO</th>
+<th>300.000</th>
+<th>1,5 Mio = <strong>15 %</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ø Return</td>
+<td>491,9</td>
+<td><strong>686,6</strong> (+40 %)</td>
+</tr>
+<tr>
+<td>1000 Schritte durchgehalten</td>
+<td>0 %</td>
+<td><strong>0 %</strong></td>
+</tr>
+</tbody>
+</table><div class="nummer">11</div></section><section class="folie"><h1>Wer rennt, verliert</h1>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Tempo</th>
+<th>Episodenlänge</th>
+<th>Ø Return</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PPO nach 1,5 Mio</td>
+<td><strong>1,60 m/s</strong></td>
+<td>112</td>
+<td>730</td>
+</tr>
+<tr>
+<td>SAC nach 300.000</td>
+<td>0,22 m/s</td>
+<td><strong>651</strong></td>
+<td><strong>3.269</strong></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>PPO ist <strong>siebenmal schneller</strong> — und trotzdem letzter</li>
+<li>bei 1,60 m/s: <strong>2,0</strong> Punkte vorwärts gegen <strong>5,0</strong> fürs Überleben</li>
+<li>PPO optimiert fleißig den <strong>falschen</strong> Teil der Formel</li>
+</ul>
+<div class="vier">
+<figure>
+<video src="videos/animation-7-ppo-ep11317-return1502.mp4" autoplay loop muted playsinline></video>
+<figcaption><strong>PPO</strong> nach 1 Mio Schritten — stolpert nach vorn, Sturz bei Schritt 267</figcaption>
+</figure>
+<figure>
+<video src="videos/animation-2-ep2194-return5134.mp4" autoplay loop muted playsinline></video>
+<figcaption><strong>SAC</strong> nach 1 Mio Schritten — bleibt die vollen 1000 Schritte oben</figcaption>
+</figure>
+</div><div class="nummer">12</div></section><section class="folie"><h1>Parameterstudie: die Lernrate von SAC</h1>
+<p><img alt="Durchgang 1" src="diagramme/2-3-vergleich-seed0.png" /></p>
+<p><img alt="Durchgang 2" src="diagramme/2-3-vergleich-seed1.png" /></p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>kleiner</th>
+<th><strong>empfohlen</strong></th>
+<th>größer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lernrate</td>
+<td><code>1e−4</code></td>
+<td><strong><code>3e−4</code></strong></td>
+<td><code>1e−3</code></td>
+</tr>
+</tbody>
+</table>
+<p>Bestes Verfahren aus 2.2, drei Ausprägungen, je zwei Durchgänge</p><div class="nummer">13</div></section><section class="folie"><h1>Das Ergebnis</h1>
+<table>
+<thead>
+<tr>
+<th>Ø der letzten 50 Episoden</th>
+<th><code>1e−4</code></th>
+<th><strong><code>3e−4</code></strong></th>
+<th><code>1e−3</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Return, Mittel</td>
+<td>3.064</td>
+<td><strong>3.475</strong></td>
+<td>1.172</td>
+</tr>
+<tr>
+<td>Zielmarke erreicht</td>
+<td>0 / 12 %</td>
+<td><strong>6 / 34 %</strong></td>
+<td><strong>nie</strong></td>
+</tr>
+<tr>
+<td>Streuung zwischen den Durchgängen</td>
+<td><strong>43 %</strong></td>
+<td><strong>6 %</strong></td>
+<td>28 %</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>gegen <code>1e−3</code> ist der Abstand <strong>eindeutig</strong> — Faktor 3, in beiden Durchgängen</li>
+<li>gegen <code>1e−4</code> entscheidet <strong>nicht</strong> der Return: Der dreht sich mit dem Seed</li>
+<li>der Profilwert gewinnt über <strong>Verlässlichkeit</strong> — sechsmal reproduzierbarer</li>
+</ul><div class="nummer">14</div></section><section class="folie"><h1>Stehen oder Gehen?</h1>
+<table>
+<thead>
+<tr>
+<th>Durchgang 2</th>
+<th><code>1e−4</code></th>
+<th><strong><code>3e−4</code></strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1000 Schritte durchgehalten</td>
+<td><strong>68 %</strong></td>
+<td>44 %</td>
+</tr>
+<tr>
+<td>Zielmarke erreicht</td>
+<td>12 %</td>
+<td><strong>34 %</strong></td>
+</tr>
+<tr>
+<td>Strecke vorwärts</td>
+<td>1,9 m</td>
+<td><strong>2,5 m</strong></td>
+</tr>
+</tbody>
+</table>
+<h3>1000 Schritte aufrecht ergeben <em>genau</em> 5000</h3>
+<p>Wer die Marke überschreitet, hat sich <strong>bewegt</strong>.
+Die kleine Lernrate lernt <strong>sicheres Stehen</strong>, der Profilwert <strong>vorsichtiges Gehen</strong>.</p><div class="nummer">15</div></section><section class="folie"><h1>Der Lernverlauf in vier Videos</h1>
+<div class="vier">
+<figure>
+<video src="videos/animation-2-ep2194-return5134.mp4" autoplay loop muted playsinline></video>
+<figcaption>~1 Mio Schritte<br><strong>5.134</strong></figcaption>
+</figure>
+<figure>
+<video src="videos/animation-3-ep4091-return6372.mp4" autoplay loop muted playsinline></video>
+<figcaption>~2 Mio Schritte<br><strong>6.372</strong></figcaption>
+</figure>
+<figure>
+<video src="videos/animation-4-ep5302-return7186.mp4" autoplay loop muted playsinline></video>
+<figcaption>~3 Mio Schritte<br><strong>7.186</strong></figcaption>
+</figure>
+<figure>
+<video src="videos/animation-5-ep8083-return7470.mp4" autoplay loop muted playsinline></video>
+<figcaption>7 Mio Schritte<br><strong>7.470</strong></figcaption>
+</figure>
+</div>
+
+<p>Alle vier: <strong>je 1000 Schritte in 15 Sekunden Echtzeit</strong></p><div class="nummer">16</div></section><section class="folie"><h1>Und mit mehr Budget?</h1>
+<p><img alt="7 Millionen Schritte" src="diagramme/2-4-lauf-7mio.png" /></p>
+<div class="zwei">
+<div>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>300.000</th>
+<th><strong>7 Mio</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ø Return</td>
+<td>2.154 / 3.269</td>
+<td><strong>6.718</strong></td>
+</tr>
+<tr>
+<td>Tempo</td>
+<td>0,21 m/s</td>
+<td><strong>1,95 m/s</strong></td>
+</tr>
+<tr>
+<td>Strecke</td>
+<td>1,5 m</td>
+<td><strong>28,6 m</strong></td>
+</tr>
+<tr>
+<td>durchgehalten</td>
+<td>15 / 40 %</td>
+<td><strong>92 %</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Die Figur läuft</strong> · Zoo-Benchmark 6.232 <strong>übertroffen</strong></p>
+<p>Dieselben 15 Sekunden wie am Anfang: damals fällt sie immer wieder, jetzt ein Durchlauf</p>
+</div>
+<div>
+<video autoplay="autoplay" loop="loop" muted="muted" playsinline="playsinline" src="videos/animation-5-ep8083-return7470.mp4"></video>
+</div>
+</div><div class="nummer">17</div></section><section class="folie"><h1>Was ich mitnehme</h1>
+<ul>
+<li><strong>SAC gewinnt</strong> — bei knappem Budget mit Faktor 5,5 vor PPO und TD3</li>
+<li><strong>Die empfohlenen Werte sind gut gewählt.</strong> Der Profilwert der Lernrate schlägt beide Nachbarn — nicht im Return, sondern in der Verlässlichkeit</li>
+<li><strong>Ein Lauf ist kein Ergebnis</strong>, und gleicher Seed heißt nicht gleicher Lauf</li>
+<li><strong>Die Reward-Formel entscheidet alles.</strong> Sie bestimmt, ob die Figur stehen oder laufen lernt — und in welcher Reihenfolge</li>
+</ul><div class="nummer">18</div></section><section class="folie"><h1>Ausblick: neuere Verfahren, gleiches Budget</h1>
+<p><img alt="Gleiche Schrittzahl" src="diagramme/2-5-vergleich-gleiche-schritte.png" /></p>
+<p><strong>300.000 Schritte</strong> für alle drei — Seitenprojekt mit <code>CrossQ</code> und <code>TQC</code></p>
+<div class="zwei">
+<div>
+<table>
+<thead>
+<tr>
+<th>bei 300.000</th>
+<th>SAC</th>
+<th><strong>CrossQ</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ø Return</td>
+<td>2.893</td>
+<td><strong>4.435</strong></td>
+</tr>
+<tr>
+<td>Zielmarke erreicht</td>
+<td>14 %</td>
+<td><strong>64 %</strong></td>
+</tr>
+<tr>
+<td>Tempo</td>
+<td>0,21 m/s</td>
+<td><strong>1,06 m/s</strong></td>
+</tr>
+<tr>
+<td>Strecke</td>
+<td>2,1 m</td>
+<td><strong>14,0 m</strong></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div>
+<ul>
+<li>CrossQ <strong>läuft</strong> schon nach 300.000 Schritten</li>
+<li><strong>aber</strong>: dreifache Rechenzeit je Schritt</li>
+<li>nach Zeit gemessen ist es Letzter, nach Daten Erster</li>
+</ul>
+</div>
+</div><div class="nummer">19</div></section><section class="folie"><h1>Danke</h1>
+<video src="videos/animation-6-crossq-ep1931-return7618.mp4" autoplay loop muted playsinline></video>
+
+<p><strong>CrossQ nach 600.000 Schritten</strong> — Ø 6.988, aufrecht joggend.
+Mehr als SAC nach 7 Millionen, bei einem Zwölftel der Daten.</p>
+<h2>Fragen?</h2><div class="nummer">20</div></section><script>
+const folien = [...document.querySelectorAll('.folie')];
+let aktuell = 0;
+function zeige(n) {
+  aktuell = Math.max(0, Math.min(folien.length - 1, n));
+  folien.forEach((f, i) => {
+    const an = i === aktuell;
+    f.classList.toggle('aktiv', an);
+    f.querySelectorAll('video').forEach(v => {
+      if (an) { v.currentTime = 0; v.play().catch(() => {}); } else { v.pause(); }
+    });
+  });
+  location.hash = aktuell + 1;
+}
+document.addEventListener('keydown', e => {
+  if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) zeige(aktuell + 1);
+  if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) zeige(aktuell - 1);
+  if (e.key === 'Home') zeige(0);
+  if (e.key === 'End') zeige(folien.length - 1);
+});
+document.addEventListener('click', e => {
+  if (e.target.closest('video')) return;          // Klick auf Video steuert das Video
+  zeige(aktuell + (e.clientX > window.innerWidth / 2 ? 1 : -1));
+});
+zeige(parseInt(location.hash.slice(1)) - 1 || 0);
+</script></body></html>

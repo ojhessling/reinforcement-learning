@@ -1,0 +1,57 @@
+Statistik            Verfahren 1
+────────────────────────────────
+Algorithmus                  SAC
+Episoden                   9.670
+Schritte               7.000.000
+Budget N/E         1.000.000 / ∞
+Ende durch         Schrittbudget
+Beste Episode     #8083: 7.469,8
+Ø der letzten 500 Episoden
+Return                   6.717,8
+Länge                        952
+Tempo m/s                   1,95
+Strecke x m                 28,6
+seitlich m                 10,58
+Sturzquote                  8,2%
+Durchhaltequote            91,8%
+Zielquote                  93,8%
+
+Zielmarke 5.000 = 1000 Schritte aufrecht, Durchhalten = 1000 Schritte erreicht
+
+Konfiguration:
+[Verfahren 1]
+algorithm: SAC
+total_timesteps: 1000000
+episodes: 0
+learning_rate: 0.0003
+learning_rate_schedule: konstant
+batch_size: 256
+gamma: 0.99
+seed: 0
+actor_arch: (256, 256)
+critic_arch: (256, 256)
+activation: ReLU
+optimizer: Adam
+optimizer_eps: 1e-08
+optimizer_weight_decay: 0.0
+log_std_init: 0.0
+use_sde: False
+sde_sample_freq: -1
+buffer_size: 500000
+learning_starts: 10000
+tau: 0.005
+train_freq: 1
+gradient_steps: 1
+action_noise: keins
+action_noise_sigma: 0.1
+ent_coef_mode: auto
+ent_coef_value: 1.0
+target_entropy: auto
+target_update_interval: 1
+normalize_obs: False
+normalize_reward: False
+clip_obs: 10.0
+clip_reward: 10.0
+
+slot_count: 2
+smoothing_window: 500

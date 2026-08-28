@@ -1,6 +1,6 @@
 # Gymnasium-Animationen und Methodenvergleich
 
-**Projektarbeit Reinforcement Learning** · AlfaTraining, August 2026
+**Projektarbeit Reinforcement Learning** · AlfaTraining, August 2026 ·
 Kurs D21195UYS · Dozent: Manfred Messing
 
 **Oliver Hessling** · Zugeteilte Animation: `Humanoid-v5` · Methoden: PPO, TD3, SAC
@@ -26,6 +26,14 @@ gleichen **Anteil** seines Profilbudgets (1,5 Mio Schritte) bleibt PPO beim
 Vierfachen unter SAC. Es steckt seine Daten ins Tempo statt ins Aufrechtbleiben –
 und genau das bestraft die Reward-Formel von `Humanoid-v5`.
 
+Bei 300.000 Schritten läuft die Figur nicht, sie lernt gerade erst stehen. Wie
+weit es noch ist, zeigt ein Ausblick außerhalb des bewerteten Vergleichs: Mit
+**7 Millionen Schritten** geht dieselbe SAC-Konfiguration mit 1,95 m/s, hält in
+92 % der Episoden durch und übertrifft mit 6.718 den offiziellen Benchmark von
+6.232 (Abschnitt 2.4). Ein zweiter Ausblick tauscht statt des Budgets das
+Verfahren: **CrossQ** erreicht bei denselben 300.000 Schritten 4.435 und läuft
+mit 1,06 m/s — kostet dafür aber die dreifache Rechenzeit (Abschnitt 2.5).
+
 ---
 
 ## Inhalt
@@ -37,6 +45,8 @@ und genau das bestraft die Reward-Formel von `Humanoid-v5`.
   - [2.1 Individuelle Zuweisung](#21-individuelle-zuweisung)
   - [2.2 Reward-Plots, Methodenvergleich](#22-reward-plots-methodenvergleich)
   - [2.3 Reward-Plots, Parameterstudie](#23-reward-plots-parameterstudie)
+  - [2.4 Ausblick: 7 Millionen Schritte](#24-ausblick-was-mit-7-millionen-schritten-passiert)
+  - [2.5 Ausblick: Neuere Verfahren](#25-ausblick-neuere-verfahren-bei-gleichem-budget)
 - [Teil 3: Dokumentation und Präsentation](#teil-3-dokumentation-und-präsentation)
 - [Kritische Reflexion](#kritische-reflexion)
 - [Anhang: Vorgabenabgleich](#anhang-vorgabenabgleich)
@@ -52,7 +62,7 @@ und die Ergebnisse als Diagramm und Tabelle zeigt.
 
 <div align="center">
 
-![Screenshot der Workbench](screenshot-workbench.png)
+![Screenshot der Workbench](screenshots/screenshot-workbench.png)
 
 *Oben links der Konfigurator, rechts daneben die Animationen der drei Verfahren.
 Unten links die Reward-Plots, rechts die Summary mit allen Kennzahlen.*
@@ -72,7 +82,7 @@ Im Konfigurator wird eingestellt, **was** verglichen wird:
 
 <div align="center">
 
-![Der Konfigurator](screenshot-konfigurator.png)
+![Der Konfigurator](screenshots/screenshot-konfigurator.png)
 
 *Oben die Verfahrenswahl mit Animationsmodus je Slot, Steuerung und Statuszeile.
 Unten der Reiter des aktiven Verfahrens – hier SAC mit Training, Replay Buffer,
@@ -102,7 +112,7 @@ erkennbar) oder deren Lernstand deterministisch laufen (`beste Pol.`).
 
 <div align="center">
 
-![Animationsanzeige mit eingeblendeten Messwerten](screenshot-anzeige.png)
+![Animationsanzeige mit eingeblendeten Messwerten](screenshots/screenshot-anzeige.png)
 
 *Links eine der drei Anzeigen: Die Überschrift nennt Slot, Algorithmus und –
 weil sich dieser Slot von den anderen unterscheidet – den abweichenden
@@ -240,11 +250,11 @@ hat sich hier ausgezahlt (siehe 2.2.4).
 
 ##### Gemeinsamer Vergleich
 
-![Vergleich aller drei Verfahren, Durchgang 1](2-2-vergleich-seed0.png)
+![Vergleich aller drei Verfahren, Durchgang 1](diagramme/2-2-vergleich-seed0.png)
 
 *Durchgang 1 (`seed = 0`).*
 
-![Vergleich aller drei Verfahren, Durchgang 2](2-2-vergleich-seed1.png)
+![Vergleich aller drei Verfahren, Durchgang 2](diagramme/2-2-vergleich-seed1.png)
 
 *Durchgang 2 (`seed = 1`).*
 
@@ -254,11 +264,11 @@ Unterschied zwischen den Bildern liegt bei TD3 – dazu 2.2.4.
 
 ##### PPO
 
-![Reward-Plot PPO, Durchgang 1](2-2-ppo-seed0.png)
+![Reward-Plot PPO, Durchgang 1](diagramme/2-2-ppo-seed0.png)
 
 *Durchgang 1 (`seed = 0`).*
 
-![Reward-Plot PPO, Durchgang 2](2-2-ppo-seed1.png)
+![Reward-Plot PPO, Durchgang 2](diagramme/2-2-ppo-seed1.png)
 
 *Durchgang 2 (`seed = 1`).*
 
@@ -271,11 +281,11 @@ kann.**
 
 ##### TD3
 
-![Reward-Plot TD3, Durchgang 1](2-2-td3-seed0.png)
+![Reward-Plot TD3, Durchgang 1](diagramme/2-2-td3-seed0.png)
 
 *Durchgang 1 (`seed = 0`).*
 
-![Reward-Plot TD3, Durchgang 2](2-2-td3-seed1.png)
+![Reward-Plot TD3, Durchgang 2](diagramme/2-2-td3-seed1.png)
 
 *Durchgang 2 (`seed = 1`).*
 
@@ -293,11 +303,11 @@ der Agent zufällig.
 
 ##### SAC
 
-![Reward-Plot SAC, Durchgang 1](2-2-sac-seed0.png)
+![Reward-Plot SAC, Durchgang 1](diagramme/2-2-sac-seed0.png)
 
 *Durchgang 1 (`seed = 0`).*
 
-![Reward-Plot SAC, Durchgang 2](2-2-sac-seed1.png)
+![Reward-Plot SAC, Durchgang 2](diagramme/2-2-sac-seed1.png)
 
 *Durchgang 2 (`seed = 1`).*
 
@@ -453,14 +463,14 @@ Zwei Läufe, `seed = 0` und `seed = 1`, sonst dasselbe Profil wie in 2.2.2,
 `Episoden E = 0`, je 1.500.160 Schritte. Rechenzeit: rund 50 Minuten je Lauf –
 PPO schafft 481 Schritte in der Sekunde, die Off-Policy-Verfahren nur 50.
 
-![PPO mit 1,5 Mio Schritten, beide Zufallsstarts](2-2-ppo-1500k-vergleich.png)
+![PPO mit 1,5 Mio Schritten, beide Zufallsstarts](diagramme/2-2-ppo-1500k-vergleich.png)
 
 *Beide Durchgänge, gemeinsam. Die Zielmarke liegt außerhalb des Bildes, weil
 die Y-Achse den Messwerten folgt.*
 
-![PPO 1,5 Mio, Durchgang 1](2-2-ppo-1500k-seed0.png)
+![PPO 1,5 Mio, Durchgang 1](diagramme/2-2-ppo-1500k-seed0.png)
 
-![PPO 1,5 Mio, Durchgang 2](2-2-ppo-1500k-seed1.png)
+![PPO 1,5 Mio, Durchgang 2](diagramme/2-2-ppo-1500k-seed1.png)
 
 | Kennzahl | 300.000 D1 | 300.000 D2 | **1,5 Mio D1** | **1,5 Mio D2** |
 | --- | --- | --- | --- | --- |
@@ -493,6 +503,23 @@ mehr einbringt (`5,0` je überlebtem Schritt). Bei 1,60 m/s sind das 2,0 Punkte
 pro Schritt aus der Vorwärtsbewegung gegen 5,0 aus dem Überleben. Wer 112
 Schritte lang schnell rennt, sammelt weniger als wer 651 Schritte lang steht –
 so lange hielt SAC in Durchgang 2 im Mittel durch.
+
+Wie das aussieht, zeigt eine Aufzeichnung aus Durchgang 2 nach rund einer
+Million Schritten – Episode 11.317, mit 1.501,9 die zu diesem Zeitpunkt beste
+des Laufs:
+
+<div align="center">
+
+![PPO nach rund 1 Million Schritten](videos/animation-7-ppo-streifen.png)
+
+*PPO, Durchgang 2, Episode 11.317 (Return 1.501,9): Die Figur startet aufrecht,
+kippt nach vorn und fängt sich mit immer größeren Ausfallschritten, bis sie nach
+267 Schritten stürzt. Sie kommt dabei zügig voran — nur eben nicht lange. Das
+Video dazu liegt als `animation-7-ppo-…mp4` im Ordner `videos/`; es dauert in
+Echtzeit **vier Sekunden**, während die SAC-Episode derselben Trainingsphase
+volle 15 Sekunden läuft.*
+
+</div>
 
 Damit erklärt sich auch der Verlauf der Kurve: Zwischen Episode 6.000 und
 15.000 steigt sie nur noch von rund 600 auf 700. PPO ist nicht am Ende seines
@@ -595,11 +622,11 @@ dem in 2.3.1 vorab festgelegten Kriterium.
 
 ##### Gemeinsamer Vergleich
 
-![Alle drei Lernraten, Durchgang 1](2-3-vergleich-seed0.png)
+![Alle drei Lernraten, Durchgang 1](diagramme/2-3-vergleich-seed0.png)
 
 *Durchgang 1 (`seed = 0`). Blau `1e−4`, rot `3e−4` (Profilwert), gelb `1e−3`.*
 
-![Alle drei Lernraten, Durchgang 2](2-3-vergleich-seed1.png)
+![Alle drei Lernraten, Durchgang 2](diagramme/2-3-vergleich-seed1.png)
 
 *Durchgang 2 (`seed = 1`), dieselben Farben.*
 
@@ -609,9 +636,9 @@ abhebt, ist allerdings in jedem Durchgang eine andere.
 
 ##### Kleine Lernrate `1e−4`
 
-![Reward-Plot Lernrate 1e-4, Durchgang 1](2-3-lr-klein-seed0.png)
+![Reward-Plot Lernrate 1e-4, Durchgang 1](diagramme/2-3-lr-klein-seed0.png)
 
-![Reward-Plot Lernrate 1e-4, Durchgang 2](2-3-lr-klein-seed1.png)
+![Reward-Plot Lernrate 1e-4, Durchgang 2](diagramme/2-3-lr-klein-seed1.png)
 
 Beide Durchgänge bleiben lange flach und heben spät ab – in Durchgang 1 ab
 Episode 1800 auf rund 2.400, in Durchgang 2 ab Episode 1900 auf rund 3.800.
@@ -619,9 +646,9 @@ Der zweite Durchgang endet dabei am steilsten Punkt seiner Kurve.
 
 ##### Empfohlene Lernrate `3e−4`
 
-![Reward-Plot Lernrate 3e-4, Durchgang 1](2-3-lr-empfohlen-seed0.png)
+![Reward-Plot Lernrate 3e-4, Durchgang 1](diagramme/2-3-lr-empfohlen-seed0.png)
 
-![Reward-Plot Lernrate 3e-4, Durchgang 2](2-3-lr-empfohlen-seed1.png)
+![Reward-Plot Lernrate 3e-4, Durchgang 2](diagramme/2-3-lr-empfohlen-seed1.png)
 
 Löst sich in beiden Durchgängen als **erste** nach oben, ab Episode 1500, und
 erreicht rund 3.500. Die beiden Kurven ähneln einander so stark, dass man sie
@@ -629,9 +656,9 @@ ohne Beschriftung verwechseln könnte – dazu 2.3.4.
 
 ##### Große Lernrate `1e−3`
 
-![Reward-Plot Lernrate 1e-3, Durchgang 1](2-3-lr-gross-seed0.png)
+![Reward-Plot Lernrate 1e-3, Durchgang 1](diagramme/2-3-lr-gross-seed0.png)
 
-![Reward-Plot Lernrate 1e-3, Durchgang 2](2-3-lr-gross-seed1.png)
+![Reward-Plot Lernrate 1e-3, Durchgang 2](diagramme/2-3-lr-gross-seed1.png)
 
 Steigt gleichmäßig, aber flach, und endet bei rund 1.000 beziehungsweise 1.400.
 Kein Absturz, kein Ausbruch nach oben: Die Figur lernt etwas, aber nichts, was
@@ -766,27 +793,287 @@ Kurven war am Ende auskonvergiert; alle stiegen zum Schluss noch. Die Studie
 vergleicht damit **Lerngeschwindigkeit bei knappem Budget**, nicht den
 Endzustand.
 
+### 2.4 Ausblick: Was mit 7 Millionen Schritten passiert
+
+Der Vergleich in 2.2 und 2.3 steht bei 300.000 Schritten, und an mehreren
+Stellen sagt dieser Bericht denselben Satz: Was dort zu sehen ist, ist die
+**Frühphase** des Lernens. Diese Behauptung lässt sich prüfen. Nach Abschluss
+der bewerteten Läufe wurde **ein** SAC-Lauf mit dem unveränderten Profil bis auf
+**7 Millionen Schritte** fortgesetzt — rund 21 Stunden Rechenzeit, in mehreren
+Abschnitten über die Funktion „Training fortsetzen".
+
+<div align="center">
+
+![Lernkurve über 7 Millionen Schritte](diagramme/2-4-lauf-7mio.png)
+
+*9.670 Episoden. Flach bis Episode 2.000, steiler Anstieg bis 3.000, die
+Zielmarke fällt bei rund 4.000, ab 5.500 ein Plateau über 6.500.*
+
+</div>
+
+| Kennzahl | 300.000 Schritte (2.2) | **7 Mio Schritte** |
+| --- | --- | --- |
+| Ø Return | 2.153,9 / 3.269,2 | **6.717,8** |
+| Beste Einzelepisode | 5.055,7 | **7.469,8** |
+| Ø Episodenlänge | 434 / 651 | **952** |
+| Ø Tempo vorwärts | 0,21 m/s | **1,95 m/s** |
+| Ø Strecke vorwärts | 1,5 m | **28,6 m** |
+| Durchhaltequote | 15 % / 40 % | **91,8 %** |
+| Zielquote | 5 % / 30 % | **93,8 %** |
+
+**Die Figur läuft.** Das ist die eigentliche Antwort: nicht der höhere Return,
+sondern **1,95 m/s und 28,6 Meter**. Bei 300.000 Schritten kam sie 1,5 Meter
+weit und blieb dabei im Wesentlichen stehen. Jetzt legt sie in neun von zehn
+Episoden die vollen 1000 Schritte zurück und bewegt sich dabei zügig vorwärts.
+
+**Der Benchmark ist erreicht.** Der RL Baselines3 Zoo gibt für SAC auf Humanoid
+nach 2 Millionen Schritten `6232,3 ± 279,9` an. Dieser Lauf steht bei
+**6.717,8** — mit demselben Profil, nur mit mehr Budget. Die Umsetzung in dieser
+Workbench erreicht die Referenz also nicht nur ungefähr, sondern übertrifft sie.
+
+**Die Reihenfolge aus der Reward-Formel bestätigt sich.** Der Bericht erklärt in
+2.2.4 und 2.3.4, warum Aufrechtbleiben zuerst gelernt wird und Vorwärtskommen
+erst danach: Der Überlebensbonus von 5,0 je Schritt ist der größere Anteil, und
+wer nach 100 Schritten umfällt, sammelt nichts mehr ein. Genau diese Reihenfolge
+zeigt die Kurve. Bis Episode 4.000 wächst vor allem die Episodenlänge — die
+Figur lernt stehen. Erst als sie zuverlässig oben bleibt, beginnt der
+Vorwärtsanteil zu tragen, und der Return steigt über die Marke von 5000, die
+reinem Stehen entspricht. **Ein Return über 5000 ist der Beweis, dass sie sich
+bewegt.**
+
+<div align="center">
+
+![Die beste Episode des Laufs](videos/animation-5-ep8083-streifen.png)
+
+*Episode 8.083, die beste des gesamten Laufs: 1000 Schritte, Return 7.469,8.
+Der Boden zeigt, wie weit sie dabei kommt — das ist kein Stehen mehr.*
+
+</div>
+
+Im Abgabeordner liegen sieben Videos, alle in **Echtzeit** und damit
+unmittelbar vergleichbar: `animation-1-fruehphase` zeigt die Frühphase, in der
+die Figur immer wieder fällt; `animation-5-ep8083` zeigt in derselben
+Zeitspanne von 15 Sekunden **eine** Episode, die durchläuft. Sechs Videos
+dauern diese 15 Sekunden, weil die Episode über die vollen 1000 Schritte läuft;
+nur `animation-7-ppo` ist nach vier Sekunden vorbei — dort stürzt die Figur
+nach 267 Schritten, und genau das ist die Aussage des Bildes. Dazwischen
+dokumentieren `animation-2`, `animation-3` und `animation-4` denselben Lauf nach rund 1, 2 und 3
+Millionen Schritten mit 5.134, 6.372 und 7.186 Punkten; der Fortschritt ist von
+Video zu Video zu sehen.
+
+**Was dieser Lauf nicht ist.** Er gehört ausdrücklich **nicht** zum bewerteten
+Vergleich und steht deshalb hier statt in 2.2:
+
+- Er hat ein anderes Budget. Ein Vergleich mit PPO und TD3 wäre nur bei
+  gleicher Schrittzahl zulässig, und die hätte bei den beiden zusammen weitere
+  40 Stunden gekostet.
+- Er ruht auf **einem** Zufallsstart. Nach den Erfahrungen aus 2.2.4 und 2.3.4
+  heißt das: Die Größenordnung ist belastbar, die Nachkommastellen sind es
+  nicht.
+- Der Replay Buffer fasst 500.000 Übergänge. Bis 500.000 Schritte war diese
+  Verkleinerung verhaltensneutral, ab dort verdrängt er die ältesten Übergänge —
+  hier also während des größten Teils des Laufs. Mit dem Profilwert von einer
+  Million wäre das Ergebnis möglicherweise noch besser ausgefallen.
+
+Für den Bericht ändert dieser Ausblick nichts an den Ergebnissen von 2.2 und
+2.3. Er beantwortet nur die Frage, die dort offenbleiben musste: **Ja, das
+Verfahren kommt an — es braucht dafür das Zwanzigfache des Budgets, mit dem
+verglichen wurde.**
+
+### 2.5 Ausblick: Neuere Verfahren bei gleichem Budget
+
+Der Vergleich in 2.2 nimmt die drei Verfahren, die die Aufgabe zuteilt. Seit
+deren Veröffentlichung sind neuere Nachfolger von SAC erschienen. Ein
+Seitenprojekt außerhalb dieses Abgabeordners stellt deshalb die
+Anschlussfrage: **Holt ein neueres Verfahren bei genau demselben Budget mehr
+heraus?**
+
+Verglichen wurden `SAC` als Referenz, **`CrossQ`** und **`TQC`** — beide aus
+`sb3-contrib`, also Referenzimplementierungen, keine Eigenbauten. Alle drei
+unterscheiden sich **allein im Critic**:
+
+| | Critic | Target-Netze |
+| --- | --- | --- |
+| `SAC` | Minimum zweier Critics | ja |
+| `CrossQ` | zwei Critics, viermal breiter | **nein** — Batch Normalization ersetzt sie |
+| `TQC` | 2 × 25 Quantile, obere werden verworfen | ja |
+
+Budget, Zufallsstart, Replay Buffer, Batch und Lernstart sind identisch;
+300.000 Schritte, `seed = 0`, ein Durchgang.
+
+#### Zwei Messungen, zwei Bedeutungen von „fair"
+
+Ein Vergleich braucht eine Bezugsgröße, und es gibt zwei sinnvolle. Deshalb
+wurden **zwei** Zwischenstände desselben Laufs festgehalten.
+
+**Erstens bei gleicher Rechenzeit.** Alle drei Slots liefen gleich lange, hatten
+zu diesem Zeitpunkt aber verschieden viele Schritte geschafft:
+
+<div align="center">
+
+![Gleiche Rechenzeit](diagramme/2-5-vergleich-gleiche-zeit.png)
+
+</div>
+
+| bei gleicher Laufzeit | **SAC** | CrossQ | TQC |
+| --- | --- | --- | --- |
+| Schritte | **292.641** | 103.717 | 226.802 |
+| Ø Return (letzte 50) | 3.258,6 | 1.144,8 | **3.299,5** |
+
+**CrossQ schafft in derselben Zeit nur gut ein Drittel der Schritte.** Sein
+breiter Critic mit Batch Normalization kostet je Update ein Vielfaches. Wer nach
+„Was bekomme ich in einer Stunde?" fragt, sieht CrossQ hier abgeschlagen.
+
+**Zweitens bei gleicher Schrittzahl.** Am Ende hatten alle drei 300.000
+Schritte gesehen — dieselbe Datenmenge wie der Verfahrensvergleich in 2.2:
+
+<div align="center">
+
+![Gleiche Schrittzahl](diagramme/2-5-vergleich-gleiche-schritte.png)
+
+</div>
+
+| bei 300.000 Schritten | SAC | **CrossQ** | TQC |
+| --- | --- | --- | --- |
+| Ø Return (letzte 50) | 2.893,0 | **4.434,6** | 3.975,9 |
+| Beste Einzelepisode | 5.150,1 | **6.680,4** | 5.105,4 |
+| Ø Episodenlänge | 578 | 699 | **795** |
+| Durchhaltequote | 20 % | **64 %** | 54 % |
+| Zielquote | 14 % | **64 %** | 20 % |
+| Ø Tempo vorwärts | 0,21 m/s | **1,06 m/s** | 0,23 m/s |
+| Ø Strecke vorwärts | 2,1 m | **14,0 m** | 2,6 m |
+
+**Die Rangfolge dreht sich vollständig um.** Nach Rechenzeit ist CrossQ das
+Schlusslicht, nach Datenmenge das mit Abstand beste Verfahren — mit einem
+Vorsprung von 53 % vor SAC. Beides ist richtig; die Antwort hängt davon ab,
+welche Ressource knapp ist. Wer Simulationsschritte teuer bezahlt — bei einem
+echten Roboter etwa —, wählt CrossQ. Wer Rechenzeit knapp hat, wählt SAC.
+
+Genau dafür ist CrossQ entworfen: Es tauscht Rechenaufwand je Schritt gegen
+Sample-Effizienz.
+
+#### Und es läuft
+
+<div align="center">
+
+![CrossQ bei 300.000 Schritten](diagramme/2-5-crossq-gleiche-schritte.png)
+
+*CrossQ, 300.000 Schritte, ein Durchgang. Beste Episode 6.680,4.*
+
+</div>
+
+Der auffälligste Wert steht in der Tempozeile: **1,06 m/s und 14,0 Meter je
+Episode**. Das ist fünfmal so weit wie alles, was der Verfahrensvergleich bei
+derselben Schrittzahl gezeigt hat. Der Ausblick in 2.4 brauchte für vergleichbar
+laufende Figuren **7 Millionen** Schritte — CrossQ kommt mit 300.000 in diese
+Nähe. Die Zielquote von 64 % sagt dasselbe: In zwei von drei Episoden
+überschreitet es die Marke, die reinem Stehen entspricht, bewegt sich also
+wirklich vorwärts.
+
+#### Nicht nur schneller, sondern besser
+
+Der Vergleich oben endet bei 300.000 Schritten, weil dort das Budget des
+Verfahrensvergleichs liegt. Weitergelaufen zeigt CrossQ, dass der Vorsprung
+nicht nur ein Vorsprung in der Zeit ist:
+
+<div align="center">
+
+![CrossQ nach 600.000 Schritten](videos/animation-6-crossq-streifen.png)
+
+*CrossQ, Episode 1.931 nach rund 600.000 Schritten: 1000 Schritte,
+**Return 7.617,5** – zum Aufnahmezeitpunkt die beste Episode des Laufs, kurz
+darauf übertroffen von #1964 mit 7.669,9. Das Video dazu liegt als
+`animation-6-crossq-…mp4` im Ordner `videos/`.*
+
+</div>
+
+Zwei Dinge daran sind bemerkenswert. **Erstens der Wert:** 7.617,5 übertrifft
+die beste Episode des langen SAC-Laufs aus 2.4 (7.469,8) — und zwar nach
+**600.000 statt 7 Millionen** Schritten, also mit gut einem Zehntel der Daten.
+
+**Zweitens die Haltung.** SAC läuft auch nach 7 Millionen Schritten in
+gekrümmter Haltung, mit vorgebeugtem Rumpf und tief angewinkelten Beinen — eine
+Gangart, die den Überlebensbonus sichert und dabei irgendwie vorankommt. CrossQ
+joggt **aufrecht**, mit gestrecktem Rumpf und deutlichem Schrittwechsel. Beide
+Verfahren optimieren dieselbe Formel und finden trotzdem verschiedene Lösungen;
+die von CrossQ sieht nicht nur besser aus, sie ist auch die höher bewertete.
+
+Weitergelaufen bis 600.000 Schritte — der doppelten Datenmenge des
+Verfahrensvergleichs — sieht der Stand so aus:
+
+<div align="center">
+
+![Alle drei nach 600.000 Schritten](diagramme/2-5-vergleich-600k.png)
+
+![CrossQ allein nach 600.000 Schritten](diagramme/2-5-crossq-600k.png)
+
+*Oben alle drei gemeinsam, unten `CrossQ` allein. Ab Episode 1.400 steigt seine
+Kurve steil an und überschreitet die Zielmarke, während `SAC` und `TQC` sie erst
+gegen Episode 2.200 streifen. `CrossQ` kommt dabei mit weniger Episoden aus –
+seine Episoden sind länger, dieselbe Schrittzahl verteilt sich also auf weniger
+davon. Die dünne Linie zeigt, dass auch am Ende noch einzelne Episoden früh
+abbrechen.*
+
+</div>
+
+| bei 600.000 Schritten | SAC | **CrossQ** | TQC |
+| --- | --- | --- | --- |
+| Ø Return (letzte 50) | 3.633,7 | **6.988,3** | 3.573,3 |
+| Beste Einzelepisode | 5.337,0 | **7.669,9** | 5.457,1 |
+| Ø Episodenlänge | 701 | **937** | 678 |
+| Durchhaltequote | 44 % | **80 %** | 40 % |
+| Zielquote | 46 % | **86 %** | 42 % |
+| Ø Tempo vorwärts | 0,37 m/s | **2,29 m/s** | 0,45 m/s |
+| Ø Strecke vorwärts | 4,2 m | **32,3 m** | 4,9 m |
+
+Der Vergleich mit 2.4 ist der eigentliche Befund: **CrossQ erreicht mit 600.000
+Schritten einen höheren Durchschnitt (6.988) als SAC mit 7 Millionen (6.718)** —
+bei einem Zwölftel der Daten, und mit 2,29 gegen 1,95 m/s auch schneller. SAC
+und TQC liegen bei demselben Budget gleichauf und weit dahinter.
+
+#### Was dieser Vergleich nicht ist
+
+- **Ein Durchgang, ein Zufallsstart.** Nach den Erfahrungen aus 2.2.4 und 2.3.4
+  heißt das: Der Abstand CrossQ zu SAC ist mit 53 % groß genug, um die Richtung
+  zu glauben; die Reihenfolge von CrossQ und TQC ist es nicht.
+- **CrossQ läuft nicht auf seinem Profilwert.** Der Zoo sieht für Humanoid einen
+  Critic mit `2048` vor, verwendet wurde die Voreinstellung von `sb3-contrib`
+  mit `1024`; der Lernstart steht bei allen dreien einheitlich auf 10.000
+  statt der 5.000 des CrossQ-Profils. Beides eher zu CrossQs Nachteil.
+- **Auch der 600.000-Schritte-Lauf ist ein Einzelfall.** Eine Episode, ein
+  Zufallsstart — die Haltung ist im Video zu sehen, die Verallgemeinerung
+  bräuchte mehrere Durchgänge.
+- **Kein Teil der bewerteten Arbeit.** Die Aufgabe teilt PPO, TD3 und SAC zu.
+  Dieser Abschnitt zeigt, was mit denselben Werkzeugen darüber hinaus möglich
+  ist — die Workbench musste dafür nur um zwei Einträge erweitert werden.
+
 ---
 
 ## Teil 3: Dokumentation und Präsentation
 
 ### 3.1 Dokumentation
 
-Dieses Dokument. Alle Reward-Plots sind als PNG im selben Verzeichnis abgelegt
-und oben eingebunden. Der Abgabeordner enthält:
+Dieses Dokument. Alle Abbildungen sind im Abgabeordner abgelegt und oben
+eingebunden; zur Übersicht liegen sie nach Art des Materials in vier
+Unterordnern:
 
-| Datei(en) | Inhalt |
+| Ordner / Datei | Inhalt |
 | --- | --- |
-| `KLR-339-2026-08-Hessling_Oliver.md` | dieser Bericht |
-| `2-2-vergleich-seed0/1.png`, `2-2-{ppo,td3,sac}-seed0/1.png` | Verfahrensvergleich, 8 Plots |
-| `2-2-ppo-1500k-*.png` | Gegenprobe zum Budget, 3 Plots |
-| `2-3-vergleich-seed0/1.png`, `2-3-lr-{klein,empfohlen,gross}-seed0/1.png` | Parameterstudie, 8 Plots |
-| `2-2-summary-*.txt`, `2-3-summary-*.txt`, `2-2-ppo-1500k-summary.txt` | Kennzahlen **und vollständige Konfiguration** jedes Laufs |
-| `screenshot-*.png` | Anwendung, Messwerte-Einblendung, Bedienungsanleitung |
-| `animation-durchbruch-5000.mp4`, `-streifen.png` | eine vollständige Episode über der Zielmarke |
-| `praesentation.md`, `praesentation-notizen.md` | Folien und Sprechtext |
-| `humanoid_*.py`, `tests/` | Quellcode (4.686 Zeilen) und Testsuite (2.833 Zeilen, 210 Tests) |
+| `KLR-339-2026-08-Hessling_Oliver.md`, `.pdf` | dieser Bericht, Quelle und Satz |
+| `praesentation.md`, `praesentation.html`, `praesentation-notizen.md` | Folien, Vortragsfassung und Sprechtext |
 | `README.md`, `prompt.md` | technische Dokumentation und Vorgabenabgleich |
+| **`diagramme/`** | **25 Reward-Plots**: Verfahrensvergleich (8), Gegenprobe zum Budget (3), Parameterstudie (8), langer Lauf (1), neuere Verfahren (5) |
+| **`kennzahlen/`** | **9 Summary-Dateien**, je Lauf die Kennzahlen **und die vollständige Konfiguration** |
+| **`screenshots/`** | **4 Bilder der Anwendung**: Gesamtfenster, Konfigurator, Messwerte-Einblendung, Bedienungsanleitung |
+| **`videos/`** | **7 Videos** in Echtzeit, dazu 5 Standbildstreifen für die PDF-Fassung |
+| `humanoid_*.py`, `tests/` | Quellcode (4.686 Zeilen) und Testsuite (2.833 Zeilen, 210 Tests) |
+
+Sechs der sieben Videos zeigen den Lernverlauf in derselben Zeitspanne von
+15 Sekunden: `animation-1-fruehphase` mit mehreren Episoden, in denen die Figur
+immer wieder fällt, bis `animation-6-crossq` mit einer vollen Episode über
+7.600. Das siebte, `animation-7-ppo`, ist kürzer, weil die Episode dort nach
+267 Schritten endet. Die Dateinamen tragen Episodennummer und Return, sind also
+ohne Nachschlagen einzuordnen.
 
 Jede Summary-Datei führt neben den Kennzahlen **alle** Parameter des Laufs auf.
 Damit ist jede Zahl dieses Berichts auf ihre Konfiguration zurückzuführen und
@@ -798,7 +1085,7 @@ Environment, Verfahren, Diagrammen, Summary, Animation und Laufzeiten.
 
 <div align="center">
 
-![Bedienungsanleitung](screenshot-anleitung.png)
+![Bedienungsanleitung](screenshots/screenshot-anleitung.png)
 
 *Zweispaltig, damit der Text ohne Scrollen auf den Bildschirm passt.*
 
@@ -806,16 +1093,20 @@ Environment, Verfahren, Diagrammen, Summary, Animation und Laufzeiten.
 
 ### 3.2 Präsentation
 
-17 Folien für 10 bis 12 Minuten, als `praesentation.md` im selben Verzeichnis;
-der Sprechtext je Folie steht getrennt in `praesentation-notizen.md`.
+20 Folien für 10 bis 12 Minuten, als `praesentation.md` im selben Verzeichnis,
+dazu `praesentation.html` als Vortragsfassung, in der die Videos direkt in der
+Folie laufen; der Sprechtext je Folie steht getrennt in
+`praesentation-notizen.md`.
 
 Der Aufbau folgt bewusst nicht der Gliederung dieses Berichts, sondern einer
 Frage: **Warum gewinnt das langsamste Verfahren?** Die Reward-Formel steht
 deshalb ganz vorn, und jedes spätere Ergebnis wird auf sie zurückgeführt – der
 TD3-Zufallsbefund, PPOs Tempo-Paradox und der Unterschied zwischen Stehen und
-Gehen in der Parameterstudie. Zwei Videos zeigen Anfang und Ende des Lernens:
-die untrainierte Figur, die nach 25 Schritten umfällt, und eine vollständige
-Episode über der Zielmarke.
+Gehen in der Parameterstudie. Alle sieben Videos sind eingebunden: die
+Frühphase, in der die Figur in derselben Viertelminute immer wieder fällt; vier
+Stationen desselben langen Laufs nach 1, 2, 3 und 7 Millionen Schritten; PPO
+und SAC nebeneinander bei gleichem Trainingsstand; und zum Schluss der
+aufrecht joggende CrossQ-Lauf.
 
 ---
 
@@ -837,14 +1128,16 @@ Episode über der Zielmarke.
    Zufallsstart. Zwei Durchgänge genügen also, um eine falsche Aussage zu
    **verhindern**, aber nicht, um jede Frage zu **entscheiden**.
 
-2. **Die Figur läuft nicht.** 300.000 Schritte sind wenig. Zum Vergleich: Der
-   offizielle Benchmark erreicht mit SAC nach 2 Millionen Schritten rund 6.232.
-   Wir sind mit 2.154 und 3.269 weit darunter. Was hier gezeigt wird, ist die
-   **Frühphase** des Lernens – der Übergang von „fällt sofort um" zu „bleibt
-   eine Weile stehen". Am Ende von Durchgang 2 hält SAC in 40 % der Episoden
-   die vollen 1000 Schritte durch, in der Parameterstudie mit der kleinen
-   Lernrate sogar in 68 %. Alle Läufe stiegen zum Schluss noch, keiner war
-   auskonvergiert.
+2. **Bei 300.000 Schritten läuft die Figur nicht – geprüft, wo die Grenze
+   liegt.** Was in 2.2 und 2.3 zu sehen ist, ist die **Frühphase**: der
+   Übergang von „fällt sofort um" zu „bleibt eine Weile stehen". Am Ende von
+   Durchgang 2 hält SAC in 40 % der Episoden die vollen 1000 Schritte durch, in
+   der Parameterstudie mit der kleinen Lernrate sogar in 68 % — vorwärts kommt
+   sie dabei kaum. Der Ausblick in 2.4 zeigt, was fehlte: Mit 7 Millionen
+   Schritten, also dem Zwanzigfachen, geht dieselbe Konfiguration mit 1,95 m/s
+   und übertrifft den Zoo-Benchmark. Der Vergleich in dieser Arbeit misst
+   deshalb **Lerngeschwindigkeit bei knappem Budget**, nicht das Endergebnis
+   der Verfahren.
 
 3. **Die Budgets der Verfahren sind ungleich fair – geprüft und entschärft.**
    Gleiche Schrittzahl heißt nicht gleiche Ausgangslage, weil die empfohlenen
@@ -898,10 +1191,10 @@ Nummerierung folgt der Aufgabenstellung; `H` sind die Hinweise zum Bericht,
 | 1.2b | während des Trainings **an- und abschaltbar** | 1.2 — Feld je Verfahren, `inaktiv` wirkt im laufenden Lauf |
 | 1.2c | Eingabe **Anzahl Episoden**, Voreinstellung **1000** | 1.2 „Episodenzahl"; Feld `Episoden E` im Konfiguratorbild |
 | 1.2d | Methoden **idealerweise parallel** trainieren | 1.2 „Paralleler Ablauf" — alle Slots gleichzeitig |
-| 1.2e | episodenweiser Reward **dünn** gezeichnet | 1.2 „Reward-Plot"; in jedem der 19 Plots sichtbar |
+| 1.2e | episodenweiser Reward **dünn** gezeichnet | 1.2 „Reward-Plot"; in jedem der 25 Plots sichtbar |
 | 1.2f | Episodendurchschnitt **fett** gezeichnet | 1.2 „Reward-Plot"; Fenster einstellbar (20 bzw. 50) |
 | 1.2g | **eigene Farbe je Durchlauf, im selben Diagramm** | Vergleichsplots in 2.2.2, 2.2.5 und 2.3.3 |
-| 1.2h | Reward-Anzeige **als Image speicherbar** | 1.2 „Speichern als Bild" — alle 19 Plots sind so entstanden |
+| 1.2h | Reward-Anzeige **als Image speicherbar** | 1.2 „Speichern als Bild" — alle 25 Plots sind so entstanden |
 | 1.2i | **qualifizierte Legende** | 1.2; sichtbar in 2.3.3 (`SAC (Lernrate α 0.0003)`) |
 
 ### Teil 2 — Methoden- und Parametervergleich
@@ -928,16 +1221,16 @@ Nummerierung folgt der Aufgabenstellung; `H` sind die Hinweise zum Bericht,
 | # | Vorgabe | erfüllt in |
 | --- | --- | --- |
 | 3.1 | kurzer, aussagekräftiger Bericht in **Markdown** | dieses Dokument, mit Kurzfassung am Anfang |
-| 3.2 | kurze **Präsentation** | 3.2 — `praesentation.md`, 17 Folien für 10–12 Minuten |
+| 3.2 | kurze **Präsentation** | 3.2 — `praesentation.md` und `praesentation.html`, 20 Folien für 10–12 Minuten |
 | H1 | Beschreibung der Applikation **mit Screenshot** | Teil 1 — vier Abbildungen der Anwendung |
-| H2 | **alle** Reward-Plots übersichtlich einfügen | 19 Plots in 2.2.2, 2.2.5 und 2.3.3 |
+| H2 | **alle** Reward-Plots übersichtlich einfügen | 25 Plots in 2.2.2, 2.2.5, 2.3.3, 2.4 und 2.5, gesammelt in `diagramme/` |
 | H3 | Beobachtungen klar und nachvollziehbar | jede Zahl stammt aus einer Summary-Datei im Ordner, siehe 3.1 |
 | H4 | **einfache, verständliche Sprache** | durchgehend; Fachbegriffe bei erster Nennung erklärt |
 | H5 | Bewertungen mit **konkreten Beobachtungen** belegen | 2.2.3, 2.2.4, 2.3.4 — jede Aussage mit Kurve oder Kennzahl |
 | A1 | Abgabe als **PDF** bis 28.08.2026, 15:00 | PDF-Export dieses Dokuments |
 | A2 | Unterordner **`Projekt`** unterhalb des eigenen Namens | `Oliver/Projekt` |
 | A3 | Datei **`KLR-339-2026-08-Nachname_Vorname.md`** | `KLR-339-2026-08-Hessling_Oliver.md` |
-| A4 | **alle** Bilder, Videos, Grafiken in dieses Verzeichnis | 23 Bilder und 1 Video, direkt im Ordner, keine Unterordner |
+| A4 | **alle** Bilder, Videos, Grafiken in dieses Verzeichnis | 34 Bilder und 7 Videos im Abgabeordner, nach Art des Materials in `diagramme/`, `kennzahlen/`, `screenshots/` und `videos/` sortiert |
 
 Zwei Vorgaben sind bewusst **übererfüllt**: 2.3d verlangt ein Training je
 Ausprägung — gefahren wurden zwei, und ohne den zweiten wäre die Bewertung in

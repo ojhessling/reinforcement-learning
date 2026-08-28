@@ -1,324 +1,204 @@
-# Sprechnotizen zur Präsentation
+# Notizen · 20 Folien · 10–12 Minuten
 
-**Gesamtdauer 10–12 Minuten · 17 Folien.** Die Zeitangabe je Folie ist ein
-Richtwert; die drei Videofolien sind die Stellen, an denen man Luft holen darf.
-
-Vor dem Start: die drei Videodateien in QuickTime öffnen und in den Hintergrund
-legen, damit sie mit einem Klick laufen. In der PDF-Fassung liegt auf jeder
-Videofolie ein Standbild — das Video wird daneben abgespielt.
+Stichpunkte als Gedächtnisstütze, kein Sprechtext. Ausführlich steht alles im
+Bericht. Videos starten automatisch, sobald ihre Folie erscheint.
 
 ---
 
-## 1 · Titel — mit Video (45 s)
-
-> **Video abspielen: `animation-sturz.mp4`** — laufen lassen, während man spricht.
-
-„Das hier ist eine humanoide Figur: 42 Kilogramm, 17 Gelenke, dreidimensional.
-Und das ist der Normalzustand am Anfang jedes Trainings — sie fällt nach etwa
-25 Schritten um.
-
-Meine Aufgabe war, ihr mit drei Verfahren beizubringen, aufrecht zu bleiben und
-vorwärts zu gehen: PPO, TD3 und SAC. Ich zeige Ihnen in den nächsten zehn
-Minuten, welches gewinnt, warum das schnellste Verfahren das schlechteste ist,
-und zweimal, wie ich mich beinahe selbst getäuscht hätte."
-
----
-
-## 2 · Warum Humanoid anders ist (40 s)
-
-„Zur Einordnung, weil Sie die Umgebung schon von den anderen Vorträgen kennen:
-Humanoid ist in dieser Reihe die größte Umgebung. 348 Beobachtungswerte gegen
-11 beim Hopper, 17 Gelenke statt drei, und zum ersten Mal drei Dimensionen —
-die Figur kann also auch **seitlich** wegkippen.
-
-Zwei Fallen stecken im Detail. Erstens: Der Wertebereich der Actions ist
-**±0,4**, nicht ±1 wie in allen Vorgängerprojekten — wer das als ±1 annimmt,
-skaliert falsch. Zweitens: Die Übersetzung ist je Gelenk verschieden, von 25 an
-den Armen bis 300 an der Hüfte. Derselbe Zahlenwert bedeutet an der Hüfte das
-Zwölffache an Moment."
-
----
-
-## 3 · Die Reward-Formel (60 s) — **Kernfolie**
-
-„Diese Folie erklärt jedes Ergebnis, das noch kommt. Der Reward hat vier
-Anteile, und einer davon erschlägt die anderen: **fünf Punkte für jeden Schritt,
-den die Figur nicht umfällt.**
-
-Rechnen wir das durch: 1000 Schritte einfach nur stehen bleiben ergibt 5000
-Punkte. Vorwärtsgehen bringt 1,25 pro Meter und Sekunde — bei einem Meter pro
-Sekunde also 1,25 Punkte je Schritt gegen 5 Punkte fürs Nichtumfallen.
-
-**Aufrechtbleiben zahlt viermal besser als Laufen.** Merken Sie sich das, wir
-kommen darauf zurück.
-
-Deshalb ist meine Zielmarke 5000: Das ist genau der Return einer Figur, die eine
-volle Episode durchhält. Humanoid hat keine offizielle Gelöst-Schwelle — das ist
-eine Marke, die ich für diese Arbeit gesetzt habe, und ich nenne sie bewusst
-nicht ‚gelöst'."
-
----
-
-## 4 · Die Workbench (40 s)
-
-„Kurz zum Werkzeug: Links der Konfigurator — zwei bis vier Verfahren
-gleichzeitig, jeder Parameter des jeweiligen Algorithmus einzeln einstellbar.
-Rechts läuft die Animation, für jedes Verfahren eine eigene, jede in einem
-eigenen Prozess. Unten die Reward-Plots und eine Kennzahlentabelle.
-
-Alle ausgewählten Verfahren trainieren **gleichzeitig**. Wenn derselbe
-Algorithmus mehrere Slots belegt, erkennt die Oberfläche das und schreibt den
-abweichenden Parameter automatisch in Titel und Legende — das brauchen wir
-später bei der Parameterstudie."
-
----
-
-## 5 · Was die Anwendung zeigt (35 s)
-
-„Unter jedem Bild stehen nur drei Zahlen: Episode, Schritt, Return. Alles
-Weitere erscheint erst, wenn man mit der Maus über das Bild fährt — dann
-**neben** dem Bild, damit man beides sieht: alle 17 Actions mit ihrem Moment in
-Newtonmetern, Rumpfhöhe, Neigung, die Gelenkwinkel und die vier Reward-Anteile
-einzeln.
-
-348 Werte kann man nicht anzeigen. 286 davon sind Trägheitstensoren und
-Kontaktkräfte, die kein Verhalten erklären — die fasse ich zu einer Quadratsumme
-zusammen.
-
-Und eine Kleinigkeit, auf die ich stolz bin: ‚beste Episode' rechnet die Policy
-nicht nach, sondern spielt die Episode **exakt** nach — aufgezeichnet werden
-Simulatorzustand und jede Action. Der Return stimmt deshalb auf die
-Nachkommastelle mit dem Training überein."
-
----
-
-## 6 · Versuchsaufbau (45 s)
-
-„Die Hyperparameter kommen unverändert aus dem RL Baselines3 Zoo — die Aufgabe
-verlangt die empfohlenen Werte, also habe ich auch die ungewöhnlichen
-übernommen, etwa ein Gamma von 0,95 bei PPO.
-
-Jedes Verfahren bekommt exakt 300.000 Schritte, die Episodengrenze steht auf
-unbegrenzt. Das ist wichtig: Eine Humanoid-Episode endet beim Sturz, sie wird
-mit dem Lernfortschritt also **länger**. Wer besser lernt, sammelt in 1000
-Episoden dreimal so viele Schritte wie ein schlechtes Verfahren — dieselbe
-Episodenzahl wäre also gerade **nicht** fair.
-
-Und jede Konfiguration läuft zweimal, mit Zufallsstart 0 und 1. Warum das nicht
-Vorsicht, sondern Notwendigkeit war, sehen Sie gleich."
-
----
-
-## 7 · Der Vergleich: die Bilder (35 s)
-
-„Hier sind beide Durchgänge. Dünn und blass der Reward jeder einzelnen Episode,
-kräftig der gleitende Durchschnitt über 20 Episoden, eine Farbe je Verfahren.
-
-Die Aussage ist in beiden Bildern dieselbe: Die gelbe Kurve — SAC — löst sich ab
-etwa Episode 1500 nach oben ab. Blau ist PPO, rot ist TD3, und beide bleiben
-unten.
-
-Eine Beobachtung nebenbei: Die Kurven enden bei verschiedenen Episodennummern,
-obwohl alle gleich viele Schritte hatten. SAC braucht weniger Episoden, weil
-seine Episoden länger sind — das ist die Kernaussage in einem Bild."
-
----
-
-## 8 · Der Vergleich: die Zahlen (45 s)
-
-„In Zahlen: SAC kommt im Mittel beider Durchgänge auf 2.712, PPO auf 492, TD3
-auf 407. Das ist **Faktor 5,5**.
-
-Der Abstand ist so groß, dass Zufall als Erklärung ausscheidet: Selbst der
-schlechtere der beiden SAC-Läufe schlägt den besseren PPO-Lauf noch um das
-Vierfache.
-
-SAC ist auch das einzige Verfahren, das die Zielmarke überhaupt erreicht — die
-beste Episode liegt bei 5.102, die Figur bleibt dort die vollen 1000 Schritte
-oben. Im zweiten Durchgang schafft sie das in 40 Prozent der letzten Episoden.
-
-Zwischen PPO und TD3 sage ich **nichts** — und warum, sehen Sie jetzt."
-
----
-
-## 9 · Die Überraschung: TD3 (60 s) — **Dramaturgischer Höhepunkt 1**
-
-„Das sind zwei Läufe von TD3. Gleicher Algorithmus, exakt gleiche Parameter,
-gleiches Budget. Der einzige Unterschied ist der Zufallsstart.
-
-Links: über 7.673 Episoden eine flache Linie bei 172. Das sieht nicht nach
-langsamem Lernen aus, sondern nach ‚lernt überhaupt nichts'.
-
-Rechts: dieselbe Konfiguration steigt durchgehend auf 643 und schafft eine beste
-Episode von 1.595.
-
-Hätte ich nur den ersten Durchgang gefahren — und die Aufgabe verlangt nur
-einen —, stünde in meinem Bericht der Satz ‚TD3 lernt mit den empfohlenen
-Parametern nicht'. Der wäre schlicht falsch. Die richtige Aussage lautet: **TD3
-lernt manchmal, und ob es klappt, entscheidet sich früh.**
-
-Deshalb sage ich zu Platz 2 nichts: Der Abstand zwischen PPO und TD3 beträgt 85
-Punkte — TD3 schwankt zwischen seinen eigenen zwei Läufen um 471."
-
----
-
-## 10 · Warum SAC vorn liegt (40 s)
-
-„Die Erklärung liegt in der Verfahrensklasse. SAC ist off-policy: Jeder
-gespeicherte Übergang wird immer wieder zum Lernen benutzt. PPO wirft seine
-Daten nach jedem Update weg — bei 300.000 Schritten ist das teuer. Dazu kommt
-die gelernte Entropie: SAC regelt selbst, wie viel es noch ausprobiert.
-
-TD3 hat denselben Buffer-Vorteil, nutzt ihn aber nur in einem von zwei Läufen.
-Auffällig ist seine Lernrate: 1e−3, dreimal so hoch wie bei SAC. Bei 348
-Eingabewerten ist das mein Hauptverdächtiger — und den prüfe ich später
-tatsächlich nach."
-
----
-
-## 11 · Gegenprobe (50 s)
-
-„Bevor ich eine Rangfolge behaupte, muss ich einen Einwand ausräumen — meinen
-eigenen. Die Zoo-Profile sind für unterschiedlich lange Läufe getunt: PPO für 10
-Millionen Schritte, TD3 und SAC für je zwei. Meine 300.000 Schritte sind bei PPO
-also nur drei Prozent seines Arbeitspunktes, bei den anderen 15.
-
-Der Vergleich könnte also unfair sein. Zum Glück rechnet PPO zehnmal schneller,
-die Gegenprobe kostet daher nur 50 Minuten: PPO mit 1,5 Millionen Schritten,
-ebenfalls 15 Prozent — und ebenfalls zwei Durchgänge.
-
-Ergebnis: PPO legt um 40 Prozent zu, von 492 auf 687. Und bleibt damit beim
-**Vierfachen** unter SAC. Die Rangfolge ist also kein Artefakt des Budgets."
-
----
-
-## 12 · Wer rennt, verliert (50 s) — **Dramaturgischer Höhepunkt 2**
-
-„Viel interessanter ist, **wohin** PPO die fünffache Datenmenge steckt. Nicht
-ins Aufrechtbleiben: Die Episodenlänge wächst von 89 auf 110 Schritte, und die
-Figur fällt weiterhin in **jeder einzelnen** Episode um.
-
-Was wächst, ist das Tempo — auf 1,60 Meter pro Sekunde. Das ist die schnellste
-Figur in dieser ganzen Arbeit, siebenmal schneller als SAC.
-
-Und jetzt erinnern Sie sich an die Formel von vorhin: Bei 1,60 m/s bringt die
-Vorwärtsbewegung zwei Punkte pro Schritt. Das Überleben bringt fünf. **Wer 112
-Schritte rennt, sammelt weniger als wer 685 Schritte steht.**
-
-PPO optimiert also fleißig — nur den falschen Teil der Formel. Wenn Sie den
-Läufen zusehen, sieht PPO am besten aus und ist es am wenigsten."
-
----
-
-## 13 · Parameterstudie (50 s)
-
-„Zum zweiten Teil der Aufgabe: einen sensitiven Parameter am besten Verfahren
-in drei Ausprägungen. Ich habe SAC genommen — nach einem Kriterium, das ich
-**vor** den Läufen festgelegt habe — und die Lernrate, mit Faktor drei nach oben
-und unten um den Profilwert.
-
-Drei Gründe für die Lernrate: Sie wirkt auf zwei der drei Bewertungskriterien,
-sie erlaubt einen sauberen Dreischritt, und der große Wert ist genau die 1e−3,
-die bei TD3 im Verdacht steht. Ich prüfe damit also nebenbei meine eigene These
-aus dem ersten Teil.
-
-Das Ergebnis unten: Die große Lernrate verliert klar — Faktor drei Rückstand,
-und sie erreicht die Zielmarke in keiner einzigen Episode. **Meine TD3-These ist
-damit belegt**, innerhalb desselben Verfahrens, bei identischem Seed und
-Budget."
-
----
-
-## 14 · Was wirklich entschieden hat (55 s)
-
-„Zwischen den beiden kleineren Lernraten wird es interessant — und ehrlich
-gesagt unbequem. Der Profilwert gewinnt Durchgang eins deutlich und verliert
-Durchgang zwei knapp. Der Abstand ist kleiner als die Streuung, die eine einzige
-Konfiguration zwischen zwei Zufallsstarts zeigt. Aus dem Return allein ist hier
-**nichts** zu entscheiden, und das schreibe ich auch so.
-
-Entschieden hat etwas anderes: Die beiden Läufe mit dem Profilwert liegen 208
-Punkte auseinander, die mit der kleinen Lernrate 1.315. **Sechsmal
-reproduzierbarer.** Der empfohlene Wert bestätigt sich also nicht als höchster,
-sondern als **verlässlichster** Return.
-
-Und dann dieser Befund, den ich nicht erwartet hatte: Die kleine Lernrate hält
-**länger** durch — 68 gegen 44 Prozent — erreicht die Zielmarke aber
-**seltener**. Der Grund steckt wieder in der Formel: 1000 Schritte aufrecht
-ergeben genau 5000. Wer darüber will, muss sich zusätzlich bewegen. **Die kleine
-Lernrate hat sicheres Stehen gelernt, der Profilwert vorsichtiges Gehen.**"
-
----
-
-## 15 · Der Durchbruch (45 s) — **Video**
-
-> **Video abspielen: `animation-beste-episode.mp4`** — 15 Sekunden, Echtzeit.
-
-„Und so sieht es aus, wenn es klappt. Diese Episode läuft die vollen 1000
-Schritte und endet mit einem Return von 5.133 — die Zielmarke ist gefallen.
-
-Das Video läuft in **Echtzeit**: Eine Humanoid-Episode dauert mit 1000 Schritten
-genau 15 Sekunden Simulationszeit, und genau so lange ist der Clip.
-
-Vier Standbilder dazu auf der Folie, mit dem Return an jedem Punkt — Sie sehen,
-wie er gleichmäßig steigt: rund fünf Punkte pro Schritt, praktisch reiner
-Überlebensbonus. Die Figur läuft nicht. Sie bleibt stehen. Und genau das ist bei
-dieser Reward-Formel die richtige Antwort."
-
----
-
-## 16 · Was ich mitnehme (50 s)
-
-„Drei Dinge.
-
-**Erstens: Ein Lauf ist kein Ergebnis.** Zweimal in dieser Arbeit hätte ein
-einzelner Durchgang zu einer falschen Aussage geführt — bei TD3 und bei der
-Lernrate. Zwei Durchgänge verhindern falsche Aussagen; sie entscheiden aber
-nicht jede Frage.
-
-**Zweitens: Gleicher Seed heißt nicht gleicher Lauf.** Ich habe dieselbe
-Konfiguration zweimal mit demselben Zufallsstart gefahren und 2.136 gegen 1.947
-Episoden bekommen. Der Grund: Die Slots laufen als Threads eines Prozesses und
-teilen sich denselben Zufallsstrom von PyTorch. Der Seed macht Läufe
-**vergleichbar**, nicht identisch.
-
-**Drittens: Die Reward-Formel erklärt jedes Ergebnis.** Wer sie gelesen hat,
-sagt vorher, warum das schnellste Verfahren das schlechteste ist.
-
-Und was fehlt: Budget. Der offizielle Benchmark erreicht mit SAC nach zwei
-Millionen Schritten 6.232. Ich stehe nach 300.000 bei 2.712. Was ich zeige, ist
-die Frühphase — der Übergang von ‚fällt sofort um' zu ‚bleibt eine Weile
-stehen'."
-
----
-
-## 17 · Danke (20 s)
-
-„Im Abgabeordner liegen der Bericht, 19 Reward-Plots, die Kennzahlen jedes
-einzelnen Laufs, die Videos und der Quellcode mit 210 Tests. Vielen Dank —
-Fragen gern."
+**1 · Titel** · 40 s
+- Video läuft: in 15 Sekunden fällt sie immer wieder von vorn
+- 42 kg, 17 Gelenke, 3D
+- Ansage: diese 15 Sekunden merken, kommen am Schluss wieder
+
+**2 · Warum Humanoid schwer ist** · 35 s
+- größte Umgebung der Reihe: 348 Werte statt 11
+- 17 Gelenke gleichzeitig stellen, 67-mal je Sekunde
+- 10¹⁷ ist nur eine Veranschaulichung — in Wahrheit stufenlos
+- 3D heißt: kippt auch zur Seite, nicht nur nach vorn
+
+**3 · Die Reward-Formel** · 60 s · **Kernfolie**
+- vier Anteile, einer erschlägt alle: 5,0 fürs Nichtumfallen
+- 1000 Schritte stehen = 5000; laufen bei 1 m/s = 1,25 je Schritt
+- Zielmarke 5000 selbst gesetzt, Humanoid hat keine offizielle Schwelle
+- Ansage: darauf kommen wir dreimal zurück
+
+**4 · Die Workbench** · 35 s
+- links einstellen, rechts zusehen, unten messen
+- Parameter je Verfahren gefiltert — PPO hat keinen Replay Buffer
+- abweichender Parameter wandert automatisch in Titel und Legende
+
+**5 · Was die Anwendung zeigt** · 30 s
+- unter dem Bild nur drei Zahlen, Rest beim Überfahren
+- Reward einzeln nach seinen vier Anteilen aufgeschlüsselt
+- 286 der 348 Werte erklären kein Verhalten → verdichtet als Quadratsumme
+
+**6 · Versuchsaufbau** · 40 s
+- Zoo-Parameter unverändert, auch die ungewöhnlichen (γ 0,95 bei PPO)
+- 300.000 Schritte, Episodengrenze aus
+- warum Schritte: Episode endet beim Sturz → besseres Verfahren bekäme mehr Daten
+- zwei Durchgänge — warum, kommt gleich
+
+**7 · Der Vergleich** · 30 s
+- dünn = jede Episode, kräftig = Durchschnitt über 20
+- gelb SAC löst sich ab Episode 1500, blau und rot bleiben unten
+- Kurven enden verschieden → SAC braucht weniger Episoden, weil seine länger sind
+
+**8 · Die Zahlen** · 40 s
+- SAC 2.712 gegen 492 und 407 → Faktor 5,5
+- schlechterer SAC-Lauf schlägt besseren PPO-Lauf noch um Faktor 4
+- nur SAC erreicht die Zielmarke
+- zu Platz 2 sage ich nichts — warum, kommt jetzt
+
+**9 · Dieselben Parameter, zwei Bilder** · 60 s · **Höhepunkt 1**
+- identische Konfiguration, nur anderer Zufallsstart
+- links flach bei 172 über 7.673 Episoden, rechts steigt auf 643
+- ein Durchgang hätte „TD3 lernt nicht" ergeben — falsch
+- deshalb Platz 2 offen: 85 Punkte Abstand, 471 Punkte Eigenstreuung
+
+**10 · Warum SAC vorn liegt** · 35 s
+- off-policy: jeder Übergang mehrfach; PPO wirft weg
+- SAC regelt Erkundung über Entropie selbst
+- TD3-Verdacht: Lernrate 1e−3, dreimal SAC — prüfe ich später nach
+
+**11 · War der Vergleich fair?** · 45 s
+- eigener Einwand: PPO bei 3 % seines Budgets, andere bei 15 %
+- PPO rechnet 10× schneller → Gegenprobe kostet nur 50 min
+- 1,5 Mio Schritte = 15 %: +40 %, bleibt Faktor 4 zurück
+- Rangfolge ist kein Budget-Artefakt
+
+**12 · Wer rennt, verliert** · 50 s · **Höhepunkt 2**
+- PPO wird schneller statt standfester, 1,60 m/s
+- Durchhaltequote bleibt 0 % — fällt in jeder Episode
+- zurück zur Formel: 2,0 vorwärts gegen 5,0 überleben
+- 112 Schritte rennen < 651 Schritte stehen
+
+**13 · Parameterstudie** · 40 s
+- bestes Verfahren = SAC, Kriterium vorab festgelegt
+- Lernrate: wirkt auf zwei der drei Bewertungskriterien, sauberer Dreischritt
+- große Ausprägung ist genau TD3s 1e−3 → prüft meine eigene These
+
+**14 · Das Ergebnis** · 50 s
+- 1e−3 verliert klar, erreicht die Marke nie → TD3-These belegt
+- oben dreht sich die Reihenfolge mit dem Seed → aus Return nicht entscheidbar
+- entschieden über Streuung: 208 gegen 1.315 Punkte, sechsmal verlässlicher
+- Zoo-Empfehlung bestätigt sich als verlässlichster, nicht höchster Return
+
+**15 · Stehen oder Gehen** · 45 s
+- 1e−4 hält länger durch, erreicht die Marke aber seltener
+- Rechnung: 1000 Schritte = genau 5000, darüber nur mit Bewegung
+- kleine Lernrate lernt Stehen, Profilwert lernt Gehen
+- der schönste Befund der Arbeit, war nicht erwartet
+
+**16 · Lernverlauf in vier Videos** · 40 s
+- alle vier gleichzeitig, je 1000 Schritte in 15 s Echtzeit
+- links wackelt sie, rechts geht sie
+- Return 5.134 → 7.470
+
+**17 · Und mit mehr Budget?** · 60 s · **Höhepunkt 3**
+- nach der Abgabe weitergelaufen: 7 Mio Schritte, 21 Stunden
+- Kurve: bis Episode 4.000 wächst die Länge (stehen lernen), dann Return (gehen)
+- 6.718 im Mittel, 1,95 m/s, 28,6 m, 92 % durchgehalten
+- Zoo-Benchmark 6.232 übertroffen
+- dieselben 15 Sekunden wie Folie 1 — damals immer wieder Stürze, jetzt ein Durchlauf
+- Vorbehalt: ein Seed, anderes Budget, gehört in den Ausblick
+
+**18 · Was ich mitnehme** · 40 s
+- SAC gewinnt bei knappem Budget klar — Faktor 5,5
+- Zoo-Werte sind gut gewählt: Profilwert schlägt beide Nachbarn, über Verlässlichkeit
+- ein Lauf ist kein Ergebnis; gleicher Seed ≠ gleicher Lauf
+- Reward-Formel entscheidet, ob stehen oder laufen gelernt wird — und in welcher Reihenfolge
+- letzter Satz: erst aufrecht bleiben, dann vorwärts — das ist keine Wahl des Verfahrens, sondern der Formel
+
+**19 · Ausblick: neuere Verfahren** · 45 s
+- Seitenprojekt: SAC gegen CrossQ und TQC, gleiche Workbench, 300.000 Schritte
+- CrossQ bei gleicher Datenmenge klar vorn — und es läuft: 1,06 m/s, 14 m
+- ABER: braucht dreifache Rechenzeit je Schritt
+- zwei Bedeutungen von fair: nach Zeit ist CrossQ Letzter, nach Daten Erster
+- Antwort hängt davon ab, welche Ressource knapp ist — Roboter vs. Rechner
+- ein Seed, nicht Teil der bewerteten Arbeit
+
+**20 · Danke** · 20 s
+- Video: CrossQ nach 600.000 Schritten, joggt **aufrecht**
+- Ø 6.988 — mehr als SAC nach 7 Mio (6.718), bei einem Zwölftel der Daten
+- SAC läuft gekrümmt, CrossQ aufrecht: gleiche Formel, verschiedene Lösungen
+- Bericht, 25 Plots, Kennzahlen je Lauf, 7 Videos, 210 Tests
 
 ---
 
 ## Wenn Fragen kommen
 
-**„Warum haben Sie TD3 nicht mit kleinerer Lernrate nachgefahren?"**
-Die Aufgabe verlangt die empfohlenen Parameter. Dass TD3 damit unzuverlässig
-ist, ist ein Ergebnis, kein Fehler. Die Parameterstudie prüft die These
-stattdessen an SAC — dort ist alles andere konstant, das ist der sauberere
-Beleg.
+**Warum haben Sie TD3 nicht mit kleinerer Lernrate nachgefahren?**
+Aufgabe verlangt die empfohlenen Parameter. Dass TD3 damit unzuverlässig ist,
+ist ein Ergebnis. Die These prüfe ich stattdessen an SAC — dort ist alles andere
+konstant, das ist der sauberere Beleg.
 
-**„Warum nur 300.000 Schritte?"**
-Zeit. Ein voller Profillauf wären 11 Stunden je Off-Policy-Verfahren, bei sechs
-Läufen im Vergleich und sechs in der Studie. Ich habe das Budget lieber gesenkt
-und **zwei Seeds** gefahren, als einen einzelnen langen Lauf ohne Absicherung.
+**Warum nur 300.000 Schritte?**
+Zeit. Voller Profillauf wären 11 h je Off-Policy-Verfahren. Lieber Budget senken
+und zwei Seeds fahren als einen langen Lauf ohne Absicherung.
 
-**„Ist die Figur damit gelaufen?"**
-Nein, und das steht auch so im Bericht. Sie hält sich zunehmend länger aufrecht.
-Die Zielmarke von 5000 entspricht genau dem Stehenbleiben — sie zu erreichen
-heißt noch nicht laufen.
+**Ist die Figur bei 300.000 gelaufen?**
+Nein, sie lernt stehen. Zielmarke 5000 entspricht genau dem Stehenbleiben.
+Gelaufen ist sie erst im Ausblick bei 7 Mio.
 
-**„Wie groß ist der Aufwand für die Anwendung?"**
-Rund 4.700 Zeilen für Logik, Oberfläche und Renderprozess, dazu 2.800 Zeilen
-Tests — 210 Stück, die unter anderem die Reward-Zerlegung, den Wertebereich
-±0,4 und die Zuordnung der Gelenkwinkel gegen das MuJoCo-Modell prüfen.
+**Warum ist SAC besser als TD3, beide sind off-policy?**
+Stochastischer Actor mit gelernter Entropie gegen deterministischen Actor mit
+festem Rauschen (σ 0,1). Bei 17 Dimensionen ist festes Rauschen zu wenig, um aus
+einem schlechten Start herauszukommen.
+
+**Warum streut SAC innerhalb eines Laufs so stark?**
+Kehrseite des schnellen Lernens: Der Agent probiert mehr aus, einzelne Episoden
+misslingen deutlich. Die Richtung ist in beiden Durchgängen identisch.
+
+**Woher kommt die Zielmarke 5000?**
+Selbst gesetzt: 1000 Schritte × 5,0 Überlebensbonus. Humanoid-v5 führt keinen
+offiziellen reward_threshold — ich nenne sie deshalb nie „gelöst".
+
+**Warum zwei Seeds und nicht fünf?**
+Rechenzeit. Zwei verhindern falsche Aussagen, entscheiden aber nicht jede Frage —
+das steht auch so im Bericht. Fünf bis zehn wären rund 20 Stunden.
+
+**Wieso hat TD3 im Vergleich ein anderes Netz als im Zoo-Profil?**
+Profil nennt 400,300. Vereinheitlicht auf 256,256, damit der Vergleich nicht an
+der Netzgröße hängt. Steht als Abweichung im Bericht.
+
+**Warum ist der Replay Buffer kleiner als im Profil?**
+8 GB RAM. 1 Mio Übergänge wären 5,2 GB allein für Beobachtungen. Bei 300.000
+Schritten verdrängt der kleinere Buffer nie etwas — beim 7-Mio-Lauf schon, das
+ist dort vermerkt.
+
+**Ist PPO für Humanoid ungeeignet?**
+Das belegen meine Daten nicht. Belegt ist: Bei 15 % seines Arbeitspunktes liegt
+es Faktor 4 zurück und optimiert Tempo statt Überleben.
+
+**Wie lange lief alles zusammen?**
+Verfahrensvergleich rund 7 h, Parameterstudie rund 11 h, PPO-Gegenprobe 1,7 h,
+der lange Lauf 21 h.
+
+**Warum X-Achse Episoden und nicht Schritte?**
+Die Aufgabe verlangt „Reward über die Episoden". Die Schrittzahl steht in der
+Summary, und die unterschiedlichen Endpunkte der Kurven sind selbst eine Aussage.
+
+**Wie stellen Sie sicher, dass die Zahlen stimmen?**
+Jede Zahl stammt aus einer exportierten Summary, die neben den Kennzahlen die
+vollständige Konfiguration des Laufs enthält. 210 Tests prüfen unter anderem die
+Reward-Zerlegung und den Wertebereich ±0,4 gegen das MuJoCo-Modell.
+
+**Was war der größte Fehler unterwegs?**
+Nach Durchgang 1 stand im Entwurf „TD3 lernt nicht". Der zweite Seed hat das
+widerlegt, bevor es in den Bericht kam.
+
+**Warum laufen die Verfahren gleichzeitig?**
+Vorgabe 1.2d. Jeder Slot als eigener Thread mit eigenem Modell und eigener
+Environment — und genau daher kommt auch der geteilte Zufallsstrom.
+
+**Was würden Sie mit mehr Zeit machen?**
+Fünf Seeds je Verfahren, um Platz 2 zu entscheiden, und PPO über sein volles
+Profilbudget von 10 Mio Schritten.
+
+**Warum kein Reward Shaping?**
+Hätte den Vergleich mit dem Zoo-Benchmark unmöglich gemacht und die
+Aufgabenstellung verlangt die Umgebung unverändert.
+
+**Was ist gSDE und warum aus?**
+Zustandsabhängiges Explorationsrauschen. Die Zoo-Profile für Humanoid setzen es
+nicht, also bleibt es aus — das Feld ist in der Oberfläche vorhanden.

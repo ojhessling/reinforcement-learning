@@ -418,7 +418,12 @@ Hand im Logikmodul.
 | `humanoid_render.py` | isolierter MuJoCo-Renderprozess |
 | `prompt.md` | Projektvorgaben und Vorgabenabgleich |
 | `tests/` | Testsuite |
-| `KLR-339-2026-08-Hessling_Oliver.md` | Bericht der Kursabgabe |
-| `praesentation.md`, `praesentation-notizen.md` | Folien und Sprechtext |
-| `2-2-*.png`, `2-3-*.png`, `*-summary.txt` | Messläufe: Plots und Kennzahlen |
-| `screenshot-*.png`, `animation-*.mp4` | Abbildungen und Videos der Anwendung |
+| `KLR-339-2026-08-Hessling_Oliver.md`, `.pdf` | Bericht der Kursabgabe, Quelle und Satz |
+| `praesentation.md`, `.html`, `praesentation-notizen.md` | Folien, Vortragsfassung und Sprechtext |
+| `diagramme/` | 25 Reward-Plots aller Messläufe |
+| `kennzahlen/` | Summary je Lauf: Kennzahlen und vollständige Konfiguration |
+| `screenshots/` | vier Bilder der Anwendung |
+| `videos/` | sieben Videos in Echtzeit und fünf Standbildstreifen |
+| `werkzeuge/` | Skripte für PDF- und HTML-Erzeugung, nicht Teil der Anwendung |
+| `requirements.txt`, `conftest.py` | Abhängigkeiten und Testkonfiguration |
+| `exports/` | Rohexporte der Anwendung, nicht Teil der Abgabe |

@@ -53,12 +53,17 @@ der Anpassung für dieses Projekt in Workbench 5.1 (Gemeinsame Parameter).
 
 ### 1 Ordnerlayout und Dateinamen
 
-Alle Dateien liegen direkt in `Oliver/Projekt`, **ohne** Nummernpräfix im
+Der Projektordner heißt `Oliver/Projekt`, **ohne** Nummernpräfix im
 Ordnernamen, abweichend vom Muster `NN-name` der Projekte 00 bis 15. Grund: Die
 Aufgabenstellung schreibt diesen Ordner als Abgabeordner vor („Unterordner
 *Projekt* unterhalb des eigenen Namens"), samt Bericht und allen Bildern.
 Code und Abgabe in zwei Ordner zu trennen würde bedeuten, dass Bildpfade aus
 dem Abgabeordner herauszeigen.
+
+Innerhalb des Abgabeordners liegen die Materialien nach Art sortiert in
+`diagramme/`, `kennzahlen/`, `screenshots/` und `videos/`; Bericht, Präsentation,
+README, Prompt und der Quellcode stehen oben. Unterordner sind vom Dozenten
+ausdrücklich zugelassen, die Links im Bericht sind relativ.
 
 Dateipräfix bleibt beim Muster: `humanoid_logic.py`, `humanoid_gui.py`,
 `humanoid_render.py`, `humanoid_app.py`, Tests `test_humanoid_*.py`.
@@ -567,13 +572,13 @@ Diagramm. Erzeugte Bilder:
 
 | Datei | Inhalt | Vorgabe |
 | --- | --- | --- |
-| `2-2-vergleich-seed0.png` | alle drei Verfahren, Seed 0 | 1.2g, 2.2e–g |
-| `2-2-vergleich-seed1.png` | alle drei Verfahren, Seed 1 | 1.2g, 2.2e–g |
-| `2-2-ppo-seed0.png` … `-seed1.png` | nur PPO, je Seed | 2.2d |
-| `2-2-td3-seed0.png` … `-seed1.png` | nur TD3, je Seed | 2.2d |
-| `2-2-sac-seed0.png` … `-seed1.png` | nur SAC, je Seed | 2.2d |
+| `diagramme/2-2-vergleich-seed0.png` | alle drei Verfahren, Seed 0 | 1.2g, 2.2e–g |
+| `diagramme/2-2-vergleich-seed1.png` | alle drei Verfahren, Seed 1 | 1.2g, 2.2e–g |
+| `diagramme/2-2-ppo-seed0.png` … `-seed1.png` | nur PPO, je Seed | 2.2d |
+| `diagramme/2-2-td3-seed0.png` … `-seed1.png` | nur TD3, je Seed | 2.2d |
+| `diagramme/2-2-sac-seed0.png` … `-seed1.png` | nur SAC, je Seed | 2.2d |
 
-Dazu je Durchgang die Summary als `2-2-summary-seed0.txt` beziehungsweise
+Dazu je Durchgang die Summary als `kennzahlen/2-2-summary-seed0.txt` beziehungsweise
 `-seed1.txt`; sie trägt die Konfiguration aller drei Slots und belegt, dass
 sich die Durchgänge nur im Seed unterscheiden.
 
@@ -591,8 +596,8 @@ hält in 2.2.4 fest, dass 300.000 Schritte bei PPO nur 3 % seines Profilbudgets
 sind, bei TD3 und SAC dagegen 15 %. Weil PPO rund zehnmal schneller rechnet,
 lässt sich dieser Vorbehalt billig prüfen: zwei Läufe über je 1,5 Mio Schritte –
 ebenfalls 15 % seines Profilbudgets –, Seeds `0` und `1`, sonst unverändertes
-Profil, rund 50 Minuten je Lauf. Dateien: `2-2-ppo-1500k-vergleich.png`,
-`2-2-ppo-1500k-seed0/1.png`, `2-2-ppo-1500k-summary.txt`. Das Ergebnis steht in
+Profil, rund 50 Minuten je Lauf. Dateien: `diagramme/2-2-ppo-1500k-vergleich.png`,
+`diagramme/2-2-ppo-1500k-seed0/1.png`, `kennzahlen/2-2-ppo-1500k-summary.txt`. Das Ergebnis steht in
 2.2.5 des Berichts.
 
 ### Teil 2.3 – Parameterstudie
@@ -640,12 +645,12 @@ Kennzeichnung des abweichenden Parameters in der Legende:
 
 | Datei | Inhalt | Vorgabe |
 | --- | --- | --- |
-| `2-3-vergleich-seed0.png` … `-seed1.png` | alle drei Ausprägungen, je Durchgang | 1.2g |
-| `2-3-lr-klein-seed0/1.png` | nur die kleine Lernrate `1e-4` | **2.3c**, 2.3d |
-| `2-3-lr-empfohlen-seed0/1.png` | nur der Profilwert `3e-4` | **2.3c**, 2.3d |
-| `2-3-lr-gross-seed0/1.png` | nur die große Lernrate `1e-3` | **2.3c**, 2.3d |
+| `diagramme/2-3-vergleich-seed0.png` … `-seed1.png` | alle drei Ausprägungen, je Durchgang | 1.2g |
+| `diagramme/2-3-lr-klein-seed0/1.png` | nur die kleine Lernrate `1e-4` | **2.3c**, 2.3d |
+| `diagramme/2-3-lr-empfohlen-seed0/1.png` | nur der Profilwert `3e-4` | **2.3c**, 2.3d |
+| `diagramme/2-3-lr-gross-seed0/1.png` | nur die große Lernrate `1e-3` | **2.3c**, 2.3d |
 
-Dazu je Durchgang `2-3-summary-seed0.txt` beziehungsweise `-seed1.txt` mit den
+Dazu je Durchgang `kennzahlen/2-3-summary-seed0.txt` beziehungsweise `-seed1.txt` mit den
 Kennzahlen und der vollständigen Konfiguration aller drei Slots.
 
 Vorgabe 2.3c verlangt ausdrücklich **unterschiedliche** Reward-Plots je
@@ -710,8 +715,11 @@ Zusätzlich zu Workbench 9.3 (Abnahme) und 9.4 (README):
 
 - Bericht `KLR-339-2026-08-Hessling_Oliver.md` in diesem Ordner, in einfacher
   Sprache, mit Screenshot der Anwendung und **allen** Reward-Plots
-- Bilder liegen direkt in diesem Ordner, damit die relativen Links auch dann
-  gültig bleiben, wenn die Datei einzeln weitergereicht wird
+- Bilder, Videos und Kennzahlen liegen im Abgabeordner, zur Übersicht nach Art
+  des Materials in Unterordnern (`diagramme/`, `kennzahlen/`, `screenshots/`,
+  `videos/`). Der Dozent hat Unterordner ausdrücklich zugelassen; die Links im
+  Bericht sind relativ und bleiben damit auch gültig, wenn der Ordner als
+  Ganzes weitergereicht wird
 - jede Bewertung wird mit einer konkreten Beobachtung aus den Läufen belegt,
   nicht mit allgemeinen Aussagen über die Verfahren
 - ausdrücklich benannt wird, dass das Budget unter dem Profilwert liegt und die
@@ -788,14 +796,14 @@ wird gegen diese Tabelle. Quelle ist die Aufgabenstellung
 | 3.1 | kurzer, aussagekräftiger Bericht in **Markdown** | `KLR-339-2026-08-Hessling_Oliver.md` |
 | 3.2 | kurze **Präsentation** | `praesentation.md` – 17 Folien für 10–12 min, Sprechtext in `praesentation-notizen.md`; Export als PDF und HTML |
 | H1 | Beschreibung der Applikation **mit Screenshot** | *Abgabe* |
-| H2 | **alle** Reward-Plots übersichtlich einfügen | *Abgabe* – Plots liegen im selben Ordner |
+| H2 | **alle** Reward-Plots übersichtlich einfügen | *Abgabe* – Plots liegen im Abgabeordner unter `diagramme/` |
 | H3 | Beobachtungen klar und nachvollziehbar | *Abgabe* |
 | H4 | **einfache, verständliche Sprache** | *Abgabe* |
 | H5 | Bewertungen mit **konkreten Beobachtungen aus den Plots** belegen | *Abgabe*, *Experimente* |
 | A1 | Abgabe als **PDF bis 28.08.2026, 15:00** | *Abgabe* |
 | A2 | Unterordner **`Projekt`** unterhalb des eigenen Namens | `Oliver/Projekt` – siehe Abweichung 1 |
 | A3 | Datei **`KLR-339-2026-08-Nachname_Vorname.md`** | vorhanden |
-| A4 | **alle** Bilder, Videos, Grafiken in dieses Verzeichnis | *Abgabe* – Bilder direkt im Ordner, keine Unterordner |
+| A4 | **alle** Bilder, Videos, Grafiken in dieses Verzeichnis | *Abgabe* – im Abgabeordner, nach Art des Materials in Unterordnern; Unterordner sind vom Dozenten ausdrücklich zugelassen |
 
 Bewertungskriterien der Aufgabenstellung, die keine einzelne Vorgabe sind,
 sondern die Ausführung betreffen: Vollständigkeit und Korrektheit des
