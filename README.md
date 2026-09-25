@@ -65,3 +65,10 @@ cd Projekt && python humanoid_app.py
 ```
 
 Tests je Projekt mit `python -m pytest tests -q`.
+
+## Lizenz
+
+[MIT](LICENSE). Die verwendeten Environments stammen aus
+[Gymnasium](https://github.com/Farama-Foundation/Gymnasium) und
+[MuJoCo](https://github.com/google-deepmind/mujoco) und haben ihre eigenen
+Lizenzen.
